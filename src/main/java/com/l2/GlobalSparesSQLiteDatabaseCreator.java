@@ -108,7 +108,8 @@ INSERT INTO ranges (range, range_type, range_additional, last_update, last_updat
 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE Galaxy 7000', '3ph', '', CURRENT_TIMESTAMP, null);
 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE PMM', '3ph', '', CURRENT_TIMESTAMP, null);
 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX 250/500', '3ph', 'Symmetra PX 500kW Frame 400V & 480V 3PH', CURRENT_TIMESTAMP, null);
-INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('', '3ph', '', CURRENT_TIMESTAMP, null);
+INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('All', 'all', 'all', CURRENT_TIMESTAMP, null);
+
                                 """;
 
         try (Connection conn = DriverManager.getConnection(url);

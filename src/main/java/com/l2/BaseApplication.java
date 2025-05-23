@@ -12,19 +12,15 @@ public class BaseApplication {
     public static Path dataBaseLocation;
     private static final Logger logger = LoggerFactory.getLogger(BaseApplication.class);
 
-
+    // nothing fancy, makes db from excel file
     public static void main(String[] args) {
-        System.out.println("Hello World");
+        buildDatabase();
     }
 
-    public boolean buildDatabase() {
-        String filePath = "C:\\Users\\sesa91827\\Downloads\\Global Spares Catalogue.xlsx";
-        if (filePath == null || filePath.isEmpty()) {
-            System.out.println("No file path provided.");
-            return false;
-        }
+    public static boolean buildDatabase() {
+
         logMemory("Before workbook load");
-        try (FileInputStream fis = new FileInputStream(filePath);
+        try (FileInputStream fis = new FileInputStream(ApplicationPaths.filePath.toString());
              XSSFWorkbook workbook = new XSSFWorkbook(fis)) {
             logMemory("After workbook load");
             // create the folder to hold database if it does not exist
@@ -41,7 +37,7 @@ public class BaseApplication {
         return true;
     }
 
-    private void logMemory(String point) {
+    private static void logMemory(String point) {
         Runtime rt = Runtime.getRuntime();
         long usedMB = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
         System.out.println(point + ": " + usedMB + " MB");

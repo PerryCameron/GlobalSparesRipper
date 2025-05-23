@@ -47,9 +47,7 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.14.0")
     // https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform
     implementation("net.java.dev.jna:jna-platform:5.14.0")
-    // theme
-//    implementation("io.github.mkpaz:atlantafx-base:2.0.1")
-    // logging api
+
     implementation("org.slf4j:slf4j-api:2.0.16")
     // implementation of the SLF4J API for Logback, a reliable, generic, fast and flexible logging framework.
     implementation("ch.qos.logback:logback-classic:1.5.6")
@@ -57,11 +55,6 @@ dependencies {
     implementation("ch.qos.logback:logback-core:1.5.6")
     // allows apache poi to log
     implementation("org.apache.logging.log4j:log4j-to-slf4j:2.23.1")
-    // RichTextFX for CodeArea
-//    implementation("org.fxmisc.richtext:richtextfx:0.11.2")
-    // dictionary
-//    implementation("com.nikialeksey:jhunspell:1.0.5")
-//     Apache POI for .xlsx files
     implementation("org.apache.poi:poi:5.4.1")
     implementation("org.apache.poi:poi-ooxml:5.4.1")
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
