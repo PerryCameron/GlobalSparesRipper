@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 
 public class BaseApplication {
@@ -16,11 +17,11 @@ public class BaseApplication {
         System.out.println("Hello World");
     }
 
-    public void buildDatabase() {
-        String filePath = settingsModel.filePathProperty().get();
+    public boolean buildDatabase() {
+        String filePath = "C:\\Users\\sesa91827\\Downloads\\Global Spares Catalogue.xlsx";
         if (filePath == null || filePath.isEmpty()) {
             System.out.println("No file path provided.");
-            return null;
+            return false;
         }
         logMemory("Before workbook load");
         try (FileInputStream fis = new FileInputStream(filePath);
@@ -33,8 +34,11 @@ public class BaseApplication {
             // extracts information from xlsx file and updates database with extracted information
             ExcelRipper.extractWorkbookToSql(workbook);
             logMemory("Before workbook close");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         logMemory("After workbook close");
+        return true;
     }
 
     private void logMemory(String point) {
