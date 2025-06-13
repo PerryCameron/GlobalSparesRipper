@@ -545,11 +545,32 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             return 0; // Return 0 on error
         }
     }
-//    C:\Users\sesa91827\IdeaProjects\TSE-Notes\src\main\java\com\L2\repository\implementations\GlobalSparesRepositoryImpl.java:540: warning: [deprecation] <T>queryForObject(String,Object[],Class<T>) in JdbcTemplate has been deprecated
-//    Integer result = jdbcTemplate.queryForObject(query, params.toArray(), Integer.class);
-//                                         ^
-//    where T is a type-variable:
-//    T extends Object declared in method <T>queryForObject(String,Object[],Class<T>)
-//1 warning
+
+    @Override
+    public List<SparesDTO> findSparesAdded(String date) {
+        String sql = """
+            SELECT *
+            FROM spares
+            WHERE added_to_catalogue IS NOT NULL
+              AND DATE(added_to_catalogue) IS NOT NULL
+              AND DATE(added_to_catalogue) = added_to_catalogue
+              AND added_to_catalogue > ?
+            """;
+        return jdbcTemplate.query(sql, new SparesRowMapper(), date);
+    }
+
+    public List<SparesDTO> findSparesRemovedFromCatalogue(String date) {
+        String sql = """
+                SELECT *
+                 FROM spares
+                 WHERE removed_from_catalogue IS NOT NULL
+                   AND DATE(removed_from_catalogue) IS NOT NULL
+                   AND DATE(removed_from_catalogue) = removed_from_catalogue
+                   AND removed_from_catalogue > ?
+            """;
+        return jdbcTemplate.query(sql, new SparesRowMapper(),date);
+    }
+
+
 
 }

@@ -8,9 +8,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 
-public class BaseApplication {
+public class GSRipper {
     public static Path dataBaseLocation;
-    private static final Logger logger = LoggerFactory.getLogger(BaseApplication.class);
+    private static final Logger logger = LoggerFactory.getLogger(GSRipper.class);
 
     // nothing fancy, makes db from excel file
     public static void main(String[] args) {
