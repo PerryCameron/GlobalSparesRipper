@@ -34,5 +34,5 @@ public interface GlobalSparesRepository {
 
     List<SparesDTO> findSparesAdded(String date);
 
-    void insertSpare(SparesDTO sparesDTO);
+    List<ReplacementCrDTO> findAllReplacementCr();
 }

@@ -4,6 +4,7 @@ package com.l2;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.l2.dto.ProductToSparesDTO;
 import com.l2.dto.PropertiesDTO;
+
 import com.l2.dto.ReplacementCrDTO;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
@@ -137,25 +138,25 @@ public class ExcelRipper {
                     case 3 -> {
                         try {
                             if (!cellValue.isEmpty())
-                                replacementCrDTO.setOld_qty(Double.parseDouble(cellValue));
+                                replacementCrDTO.setOldQty(Double.parseDouble(cellValue));
                             else
-                                replacementCrDTO.setOld_qty(0);
+                                replacementCrDTO.setOldQty(0.0);
                         } catch (Exception e) {
                             logger.error(e.getMessage());
                             e.printStackTrace();
-                            replacementCrDTO.setOld_qty(99999);
+                            replacementCrDTO.setOldQty(99999.0);
                         }
                     }
                     case 4 -> {
                         try {
                             if (!cellValue.isEmpty())
-                                replacementCrDTO.setNew_qty(Double.parseDouble(cellValue));
+                                replacementCrDTO.setNewQty(Double.parseDouble(cellValue));
                             else
-                                replacementCrDTO.setNew_qty(0);
+                                replacementCrDTO.setNewQty(0.0);
                         } catch (Exception e) {
                             logger.error(e.getMessage());
                             e.printStackTrace();
-                            replacementCrDTO.setNew_qty(99999);
+                            replacementCrDTO.setNewQty(99999.0);
                         }
                     }
                 }

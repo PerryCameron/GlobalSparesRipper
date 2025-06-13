@@ -4,4 +4,8 @@ import com.l2.dto.SparesDTO;
 
 public interface ProductionRepository {
     void insertSpare(SparesDTO sparesDTO);
+
+    void updateSpareAsArchived(SparesDTO sparesDTO);
+
+    boolean existsBySpareItem(String spareItem);
 }

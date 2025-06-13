@@ -5,6 +5,7 @@ import com.l2.dto.*;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import com.l2.repository.rowmappers.ProductToSparesRowMapper;
 import com.l2.repository.rowmappers.RangesRowMapper;
+import com.l2.repository.rowmappers.ReplacementCrRowMapper;
 import com.l2.repository.rowmappers.SparesRowMapper;
 import com.l2.statictools.DatabaseConnector;
 import com.l2.statictools.NoteTools;
@@ -127,8 +128,8 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
                 ps.setString(1, replacementCrDTO.getItem());
                 ps.setString(2, replacementCrDTO.getReplacement());
                 ps.setString(3, replacementCrDTO.getComment());
-                ps.setDouble(4, replacementCrDTO.getOld_qty()); // error: incompatible types: int cannot be converted to String
-                ps.setDouble(5, replacementCrDTO.getNew_qty());
+                ps.setDouble(4, replacementCrDTO.getOldQty()); // error: incompatible types: int cannot be converted to String
+                ps.setDouble(5, replacementCrDTO.getNewQty());
                 return ps;
             }, keyHolder);
 
@@ -571,6 +572,13 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         return jdbcTemplate.query(sql, new SparesRowMapper(),date);
     }
 
-
+    @Override
+    public List<ReplacementCrDTO> findAllReplacementCr() {
+        String sql = """
+            SELECT *
+            FROM replacement_cr limit 1
+            """;
+        return jdbcTemplate.query(sql, new ReplacementCrRowMapper());
+    }
 
 }

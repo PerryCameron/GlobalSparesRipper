@@ -2,6 +2,7 @@ package com.l2;
 
 import com.l2.dto.SparesDTO;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
+import com.l2.repository.implementations.ProductionRepositoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,13 +19,21 @@ public class GSUpdater {
 
     private static void updateDataBase() {
         GlobalSparesRepositoryImpl globalSparesRepository = new GlobalSparesRepositoryImpl();
-        Path path = AppFileTools.getDbPath();
-        logger.info("Connecting to database...{}", path.toString());
-        String url = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir.resolve("global-spares.db");
+        ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
 
+        // This will add all the new ones
         List<SparesDTO> sparesDTOS = globalSparesRepository.findSparesAdded("2025-04-07");
+        logger.info("Global Spares added are {}", sparesDTOS.size());
+        sparesDTOS.forEach(sparesDTO -> {
+            productionRepository.insertSpare(sparesDTO);
+        });
 
-
+        // This will archive the archived ones
+        List<SparesDTO> deletedFromSpares = globalSparesRepository.findSparesRemovedFromCatalogue("2025-04-07");
+        logger.info("Global Spares removed are {}", deletedFromSpares.size());
+        deletedFromSpares.forEach(sparesDTO -> {
+            productionRepository.updateSpareAsArchived(sparesDTO);
+        });
     }
 }
 

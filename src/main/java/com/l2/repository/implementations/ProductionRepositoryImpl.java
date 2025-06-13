@@ -44,4 +44,44 @@ public class ProductionRepositoryImpl implements ProductionRepository {
                 sparesDTO.getLastUpdatedBy()
         );
     }
+
+    @Override
+    public void updateSpareAsArchived(SparesDTO sparesDTO) {
+        String sql = """
+            UPDATE spares
+            SET last_update = ?,
+                removed_from_catalogue = ?,
+                archived = ?
+            WHERE id = ?
+            """;
+
+        jdbcTemplate.update(sql,
+                sparesDTO.getRemovedFromCatalogue(),
+                sparesDTO.getRemovedFromCatalogue(),
+                sparesDTO.getArchived() != null && sparesDTO.getArchived() ? 1 : 0,
+                sparesDTO.getId()
+        );
+    }
+
+    @Override
+    public boolean existsBySpareItem(String spareItem) {
+        String sql = """
+            SELECT COUNT(*) 
+            FROM spares 
+            WHERE spare_item = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareItem);
+        return count != null && count > 0;
+    }
+
+    public void appendCommentBySpareItem(String spareItem, String newComment) {
+        String sql = """
+            UPDATE spares
+            SET comments = COALESCE(comments, '') || ? || ?
+            WHERE spare_item = ?
+            """;
+
+        jdbcTemplate.update(sql, "; ", newComment, spareItem);
+    }
 }

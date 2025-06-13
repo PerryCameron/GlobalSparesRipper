@@ -1,25 +1,46 @@
 package com.l2.dto;
 
 public class ReplacementCrDTO {
-    String item;
-    String replacement;
-    String comment;
-    double old_qty;
-    double new_qty;
-    String lastUpdate;
-    String lastUpdatedBy;
+    private int id;
+    private String item;
+    private String replacement;
+    private String comment;
+    private Double oldQty;
+    private Double newQty;
+    private String lastUpdate;
+    private String lastUpdatedBy;
 
     public ReplacementCrDTO() {
     }
 
+    public ReplacementCrDTO(int id, String item, String replacement, String comment, Double oldQty, Double newQty, String lastUpdate, String lastUpdatedBy) {
+        this.id = id;
+        this.item = item;
+        this.replacement = replacement;
+        this.comment = comment;
+        this.oldQty = oldQty;
+        this.newQty = newQty;
+        this.lastUpdate = lastUpdate;
+        this.lastUpdatedBy = lastUpdatedBy;
+    }
+
     public void clear() {
-        this.item = "";
-        this.replacement = "";
-        this.comment = "";
-        this.old_qty = 0;
-        this.new_qty = 0;
-        this.lastUpdate = "";
-        this.lastUpdatedBy = "";
+        id = 0;
+        item = "";
+        replacement = "";
+        comment = "";
+        oldQty = 0.0;
+        newQty = 0.0;
+        lastUpdate = "";
+        lastUpdatedBy = "";
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getItem() {
@@ -46,20 +67,20 @@ public class ReplacementCrDTO {
         this.comment = comment;
     }
 
-    public double getOld_qty() {
-        return old_qty;
+    public Double getOldQty() {
+        return oldQty;
     }
 
-    public void setOld_qty(double old_qty) {
-        this.old_qty = old_qty;
+    public void setOldQty(Double oldQty) {
+        this.oldQty = oldQty;
     }
 
-    public double getNew_qty() {
-        return new_qty;
+    public Double getNewQty() {
+        return newQty;
     }
 
-    public void setNew_qty(double new_qty) {
-        this.new_qty = new_qty;
+    public void setNewQty(Double newQty) {
+        this.newQty = newQty;
     }
 
     public String getLastUpdate() {
@@ -76,18 +97,5 @@ public class ReplacementCrDTO {
 
     public void setLastUpdatedBy(String lastUpdatedBy) {
         this.lastUpdatedBy = lastUpdatedBy;
-    }
-
-    @Override
-    public String toString() {
-        return "ReplacementCrDTO{" +
-                "item='" + item + '\'' +
-                ", replacement='" + replacement + '\'' +
-                ", comment='" + comment + '\'' +
-                ", old_qty=" + old_qty +
-                ", new_qty=" + new_qty +
-                ", lastUpdate='" + lastUpdate + '\'' +
-                ", lastUpdatedBy='" + lastUpdatedBy + '\'' +
-                '}';
     }
 }
