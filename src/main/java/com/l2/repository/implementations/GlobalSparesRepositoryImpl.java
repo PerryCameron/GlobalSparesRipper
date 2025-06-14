@@ -11,6 +11,8 @@ import com.l2.statictools.DatabaseConnector;
 import com.l2.statictools.NoteTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -110,6 +112,7 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             logger.error(e.getMessage());
             logger.error(productToSpares.toString());
             e.printStackTrace();
+            System.exit(0);
         }
         return 0;
     }
@@ -576,9 +579,125 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     public List<ReplacementCrDTO> findAllReplacementCr() {
         String sql = """
             SELECT *
-            FROM replacement_cr limit 1
+            FROM replacement_cr
             """;
         return jdbcTemplate.query(sql, new ReplacementCrRowMapper());
+    }
+
+    // this checks for a spare and returns 0 if not found and the id if found
+    @Override
+    public int getSpareItemId(String spareItem) {
+        String sql = "SELECT id FROM spares WHERE spare_item = ?";
+        try {
+            Integer id = jdbcTemplate.queryForObject(sql, Integer.class, spareItem);
+            return id != null ? id : 0;
+        } catch (EmptyResultDataAccessException e) {
+            // No record found
+            return 0;
+        } catch (Exception e) {
+            logger.error("Error checking existence of spare_item: {}", spareItem, e);
+            return 0; // Return 0 for unexpected errors
+        }
+    }
+
+    @Override
+    public int updateSpare(SparesDTO sparesDTO) {
+        // Using UTC for consistent timestamp across all users
+//        String utcTimestamp = ZonedDateTime.now(ZoneId.of("UTC"))
+//                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"));
+
+        String sql = "UPDATE spares SET " +
+                "pim = ?, " +
+                "spare_item = ?, " +
+                "replacement_item = ?, " +
+                "standard_exchange_item = ?, " +
+                "spare_description = ?, " +
+                "catalogue_version = ?, " +
+                "end_of_service_date = ?, " +
+                "last_update = ?, " +
+                "added_to_catalogue = ?, " +
+                "removed_from_catalogue = ?, " +
+                "comments = ?, " +
+                "keywords = ?, " +
+                "archived = ?, " +
+                "custom_add = ?, " +
+                "last_updated_by = ? " +
+                "WHERE id = ?";
+        try {
+            return jdbcTemplate.update(sql,
+                    sparesDTO.getPim(),
+                    sparesDTO.getSpareItem(),
+                    sparesDTO.getReplacementItem(),
+                    sparesDTO.getStandardExchangeItem(),
+                    sparesDTO.getSpareDescription(),
+                    sparesDTO.getCatalogueVersion(),
+                    sparesDTO.getProductEndOfServiceDate(),
+                    sparesDTO.getLastUpdate(),
+                    sparesDTO.getAddedToCatalogue(),
+                    sparesDTO.getRemovedFromCatalogue(),
+                    sparesDTO.getComments(),
+                    sparesDTO.getKeywords(),
+                    sparesDTO.getArchived() ? 1 : 0,
+                    sparesDTO.getCustomAdd() ? 1 : 0,
+                    sparesDTO.getLastUpdatedBy(),
+                    sparesDTO.getId()
+            );
+        } catch (Exception e) {
+            logger.error("Database error while updating spare: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    @Override
+    public SparesDTO findBySpareItem(String spareItem) {
+        String sql = "SELECT * FROM spares WHERE spare_item = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new SparesRowMapper(), spareItem);
+        } catch (EmptyResultDataAccessException e) {
+            logger.warn("Database error while finding spare item: {} reason: {}", spareItem, e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public void dropProductToSparesAndVacuum() {
+        try {
+            // Drop the product_to_spares table
+            jdbcTemplate.execute("DROP TABLE IF EXISTS product_to_spares");
+            logger.info("Dropped product_to_spares table");
+
+            // Drop the product_to_spares table
+            jdbcTemplate.execute("DROP TABLE IF EXISTS replacement_cr");
+            logger.info("Dropped replacement_cr table");
+
+            // Run VACUUM to reclaim space
+            jdbcTemplate.execute("VACUUM");
+            logger.info("Vacuumed database to reclaim space");
+        } catch (DataAccessException e) {
+            logger.error("Error dropping product_to_spares or vacuuming database", e);
+        }
+    }
+
+    @Override
+    public boolean existsBySpareItem(String spareItem) {
+        String sql = """
+            SELECT COUNT(*) 
+            FROM spares 
+            WHERE spare_item = ?
+            """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareItem);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public void appendCommentBySpareItem(String spareItem, String newComment) {
+        String sql = """
+        UPDATE spares
+        SET comments = COALESCE(comments, '') || ? || ?
+        WHERE spare_item = ?
+        """;
+        jdbcTemplate.update(sql, newComment, "\r\n", spareItem);
     }
 
 }

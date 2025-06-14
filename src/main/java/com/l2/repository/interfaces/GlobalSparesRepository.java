@@ -35,4 +35,16 @@ public interface GlobalSparesRepository {
     List<SparesDTO> findSparesAdded(String date);
 
     List<ReplacementCrDTO> findAllReplacementCr();
+
+    int getSpareItemId(String spareItem);
+
+    int updateSpare(SparesDTO sparesDTO);
+
+    SparesDTO findBySpareItem(String spareItem);
+
+    void dropProductToSparesAndVacuum();
+
+    boolean existsBySpareItem(String spareItem);
+
+    void appendCommentBySpareItem(String spareItem, String newComment);
 }

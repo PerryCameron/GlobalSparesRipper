@@ -44,7 +44,7 @@ public class GlobalSparesSQLiteDatabaseCreator {
                                 CREATE TABLE  IF NOT EXISTS spares (
                                     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
                                     pim                    TEXT, -- JSON storing pim_range and pim_product_family
-                                    spare_item             TEXT,
+                                    spare_item             TEXT UNIQUE, -- I want no duplicates here its a key
                                     replacement_item       TEXT,
                                     standard_exchange_item TEXT,
                                     spare_description      TEXT,

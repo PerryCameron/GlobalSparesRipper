@@ -75,13 +75,13 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         return count != null && count > 0;
     }
 
+    @Override
     public void appendCommentBySpareItem(String spareItem, String newComment) {
         String sql = """
-            UPDATE spares
-            SET comments = COALESCE(comments, '') || ? || ?
-            WHERE spare_item = ?
-            """;
-
-        jdbcTemplate.update(sql, "; ", newComment, spareItem);
+        UPDATE spares
+        SET comments = COALESCE(comments, '') || ? || ?
+        WHERE spare_item = ?
+        """;
+        jdbcTemplate.update(sql, newComment, "\r\n", spareItem);
     }
 }

@@ -27,7 +27,7 @@ public class DatabaseConnector {
     }
 
     public static SQLiteDataSource getProductionDataSource(String caller) {
-        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/Production/global-spares.db";
+        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/Production/spares-production.db";
         SQLiteDataSource dataSource = new SQLiteDataSource();
         dataSource.setUrl(DATABASE_URL);
 

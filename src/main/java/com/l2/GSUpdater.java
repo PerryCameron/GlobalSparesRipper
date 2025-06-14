@@ -6,7 +6,6 @@ import com.l2.repository.implementations.ProductionRepositoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
 import java.util.List;
 
 public class GSUpdater {
@@ -25,14 +24,16 @@ public class GSUpdater {
         List<SparesDTO> sparesDTOS = globalSparesRepository.findSparesAdded("2025-04-07");
         logger.info("Global Spares added are {}", sparesDTOS.size());
         sparesDTOS.forEach(sparesDTO -> {
-            productionRepository.insertSpare(sparesDTO);
+//            productionRepository.insertSpare(sparesDTO);
+            System.out.println("insert ID: " + sparesDTO);
         });
 
         // This will archive the archived ones
         List<SparesDTO> deletedFromSpares = globalSparesRepository.findSparesRemovedFromCatalogue("2025-04-07");
         logger.info("Global Spares removed are {}", deletedFromSpares.size());
         deletedFromSpares.forEach(sparesDTO -> {
-            productionRepository.updateSpareAsArchived(sparesDTO);
+            System.out.println("delete: " + sparesDTO);
+//            productionRepository.updateSpareAsArchived(sparesDTO);
         });
     }
 }

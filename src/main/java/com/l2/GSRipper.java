@@ -14,33 +14,29 @@ public class GSRipper {
 
     // nothing fancy, makes db from excel file
     public static void main(String[] args) {
+
         buildDatabase();
     }
 
     public static boolean buildDatabase() {
 
-        logMemory("Before workbook load");
+        // create a workbook of data
         try (FileInputStream fis = new FileInputStream(ApplicationPaths.filePath.toString());
              XSSFWorkbook workbook = new XSSFWorkbook(fis)) {
-            logMemory("After workbook load");
             // create the folder to hold database if it does not exist
             AppFileTools.getOrCreateGlobalSparesFolder();
             // creates the database and puts it in database folder
             GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
             // extracts information from xlsx file and updates database with extracted information
+//        ExcelRipper.extractWorkbookToSql();
             ExcelRipper.extractWorkbookToSql(workbook);
-            logMemory("Before workbook close");
+            // clean up unused database components
+            ExcelRipper.cleanUpDatabase();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logMemory("After workbook close");
         return true;
-    }
-
-    private static void logMemory(String point) {
-        Runtime rt = Runtime.getRuntime();
-        long usedMB = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
-        System.out.println(point + ": " + usedMB + " MB");
+//    }
     }
 }
 

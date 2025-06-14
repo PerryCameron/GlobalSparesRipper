@@ -8,4 +8,6 @@ public interface ProductionRepository {
     void updateSpareAsArchived(SparesDTO sparesDTO);
 
     boolean existsBySpareItem(String spareItem);
+
+    void appendCommentBySpareItem(String spareItem, String newComment);
 }
