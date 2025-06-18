@@ -13,16 +13,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 
 public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
@@ -700,4 +699,41 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         jdbcTemplate.update(sql, newComment, "\r\n", spareItem);
     }
 
+    @Override
+    public void insertSparePictures(List<SparePictureDTO> sparePictures) {
+        // Remove duplicates based on spare_name and log them
+        Map<String, SparePictureDTO> uniqueBySpareName = new LinkedHashMap<>();
+        for (SparePictureDTO picture : sparePictures) {
+            String spareName = picture.getSpareName();
+            if (uniqueBySpareName.containsKey(spareName)) {
+                logger.warn("Removed duplicate spare_name: {}", spareName);
+            } else {
+                uniqueBySpareName.put(spareName, picture);
+            }
+        }
+        List<SparePictureDTO> deduplicatedPictures = new ArrayList<>(uniqueBySpareName.values());
+
+        String sql = """
+        INSERT INTO spare_pictures (spare_name, picture)
+        VALUES (?, ?)
+        """;
+        try {
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    SparePictureDTO dto = deduplicatedPictures.get(i);
+                    ps.setString(1, dto.getSpareName());
+                    ps.setBytes(2, dto.getPicture());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return deduplicatedPictures.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            logger.error("Error inserting spare pictures", e);
+            throw new RuntimeException("Failed to insert spare pictures", e);
+        }
+    }
 }

@@ -1,13 +1,11 @@
 package com.l2;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.l2.dto.ProductToSparesDTO;
 import com.l2.dto.PropertiesDTO;
 
 import com.l2.dto.ReplacementCrDTO;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
-import com.l2.repository.implementations.ProductionRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import org.apache.poi.ooxml.POIXMLProperties;
 import org.apache.poi.ss.usermodel.Cell;
@@ -27,36 +25,33 @@ public class ExcelRipper {
     private static List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
     public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
-//       public static boolean extractWorkbookToSql() {
-
-
         Sheet sheet = workbook.getSheet("Product to Spares");
         if (sheet == null) {
             System.out.println("Sheet 'Product to Spares' not found.");
             return false;
         }
-//        // extracts metadata from workbook
+        // extracts metadata from workbook
         logger.info("Saving Meta data properties");
         extractWorkbookProperties(workbook, globalSparesRepository);
 
-//        // here is where we fill the product to spares table with items in the catelogue
+        // here is where we fill the product to spares table with items in the catelogue
         ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
         logger.info("Ripping Product to Spares");  // succeeds
         extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
 
-//        // here is where we fill the product to spares table with items that are archived
+        // here is where we fill the product to spares table with items that are archived
         productToSpares.setArchived(true);
         sheet = workbook.getSheet("Archived Product to Spares");
         logger.info("Ripping Archived Product to Spares");  // succeeds
         extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
         ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
 
-//        // here is where we fill our replament_cr table with 3-phase
+        // here is where we fill our replament_cr table with 3-phase
         sheet = workbook.getSheet("Replacement CRs");
         logger.info("Ripping Replacement CRs (3-ph)");
         extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
 
-//        // here is where we fill our replacement_cr with uniflair
+        // here is where we fill our replacement_cr with uniflair
         sheet = workbook.getSheet("Uniflair Cross Reference");
         logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
         extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
@@ -81,7 +76,6 @@ public class ExcelRipper {
 
         compactedSpares.forEach(spare -> {
             logger.info("Processing for: {}------------------------------", spare);
-
 
             // Get pim_range values for this spare_item from product_to_spares
             List<String> ranges = globalSparesRepository.getRangesFromSpareItem(spare, isArchived);
@@ -133,8 +127,6 @@ public class ExcelRipper {
 
     private static void addReplacmentCRstoNotes() {
         GlobalSparesRepositoryImpl globalSparesRepository = new GlobalSparesRepositoryImpl();
-        ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
-
         List<ReplacementCrDTO> replacements = globalSparesRepository.findAllReplacementCr();
         int count = 0;
         for (ReplacementCrDTO replacementCrDTO : replacements) {

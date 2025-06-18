@@ -1,11 +1,16 @@
 package com.l2.repository.implementations;
 
+import com.l2.dto.SparePictureDTO;
 import com.l2.dto.SparesDTO;
 import com.l2.repository.interfaces.ProductionRepository;
+import com.l2.repository.rowmappers.SparePictureRowMapper;
 import com.l2.statictools.DatabaseConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.List;
 
 public class ProductionRepositoryImpl implements ProductionRepository {
     private static final Logger logger = LoggerFactory.getLogger(ProductionRepositoryImpl.class);
@@ -84,4 +89,20 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         """;
         jdbcTemplate.update(sql, newComment, "\r\n", spareItem);
     }
+
+    @Override
+    public List<SparePictureDTO> findAllSparePictures() {
+        String sql = """
+        SELECT sp.id, sp.spare_id, s.spare_item AS spare_name, sp.picture
+        FROM spare_pictures sp
+        INNER JOIN spares s ON s.id = sp.spare_id
+        """;
+        try {
+            return jdbcTemplate.query(sql, new SparePictureRowMapper());
+        } catch (DataAccessException e) {
+            logger.error("Error retrieving spare pictures", e);
+            throw new RuntimeException("Failed to retrieve spare pictures", e);
+        }
+    }
+
 }

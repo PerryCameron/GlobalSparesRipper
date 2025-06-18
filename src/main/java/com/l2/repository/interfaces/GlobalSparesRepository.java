@@ -47,4 +47,6 @@ public interface GlobalSparesRepository {
     boolean existsBySpareItem(String spareItem);
 
     void appendCommentBySpareItem(String spareItem, String newComment);
+
+    void insertSparePictures(List<SparePictureDTO> sparePictures);
 }
