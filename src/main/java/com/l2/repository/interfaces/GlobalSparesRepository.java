@@ -6,6 +6,10 @@ import java.util.List;
 
 public interface GlobalSparesRepository {
 
+    List<SparesDTO> findSparesByItems(List<String> spareItems);
+
+    List<String> getSpareItems();
+
     long countSpares();
 
     int insertProductToSpare(ProductToSparesDTO productToSpares);

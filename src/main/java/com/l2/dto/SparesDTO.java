@@ -37,6 +37,9 @@ public class SparesDTO {
         this.lastUpdatedBy = lastUpdatedBy;
     }
 
+    public SparesDTO() {
+    }
+
     public int getId() {
         return id;
     }

@@ -15,6 +15,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
@@ -27,9 +28,56 @@ import java.util.*;
 public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     private static final Logger logger = LoggerFactory.getLogger(GlobalSparesRepositoryImpl.class);
     private final JdbcTemplate jdbcTemplate;
+    NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
 
     public GlobalSparesRepositoryImpl() {
         this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getGlobalSparesDataSource("Global Spares Repo"));
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource());
+    }
+
+
+    @Override
+    public List<SparesDTO> findSparesByItems(List<String> spareItems) {
+        if (spareItems == null || spareItems.isEmpty()) {
+            logger.info("No spare_item values provided to fetch spares.");
+            return Collections.emptyList();
+        }
+
+        String sql = "SELECT * FROM spares WHERE spare_item IN (:spareItems)";
+        Map<String, Object> params = Collections.singletonMap("spareItems", spareItems);
+
+        List<SparesDTO> spares = namedParameterJdbcTemplate.query(sql, params, (rs, rowNum) -> {
+            SparesDTO dto = new SparesDTO();
+            dto.setId(rs.getInt("id"));
+            dto.setPim(rs.getString("pim"));
+            dto.setSpareItem(rs.getString("spare_item"));
+            dto.setReplacementItem(rs.getString("replacement_item"));
+            dto.setStandardExchangeItem(rs.getString("standard_exchange_item"));
+            dto.setSpareDescription(rs.getString("spare_description"));
+            dto.setCatalogueVersion(rs.getString("catalogue_version"));
+            dto.setProductEndOfServiceDate(rs.getString("end_of_service_date"));
+            dto.setLastUpdate(rs.getString("last_update"));
+            dto.setAddedToCatalogue(rs.getString("added_to_catalogue"));
+            dto.setRemovedFromCatalogue(rs.getString("removed_from_catalogue"));
+            dto.setComments(rs.getString("comments"));
+            dto.setKeywords(rs.getString("keywords"));
+            dto.setArchived(rs.getInt("archived") == 1);
+            dto.setCustomAdd(rs.getInt("custom_add") == 1);
+            dto.setLastUpdatedBy(rs.getString("last_updated_by"));
+            return dto;
+        });
+
+        logger.info("Retrieved {} SparesDTO objects for provided spare_item values", spares.size());
+        return spares;
+    }
+
+    @Override
+    public List<String> getSpareItems() {
+        String sql = "SELECT spare_item FROM spares";
+        List<String> spareItems = jdbcTemplate.queryForList(sql, String.class);
+        logger.info("Found {} spare_item values in new database", spareItems.size());
+        return spareItems;
     }
 
     @Override

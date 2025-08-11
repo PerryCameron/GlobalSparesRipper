@@ -6,6 +6,8 @@ import com.l2.dto.SparesDTO;
 import java.util.List;
 
 public interface ProductionRepository {
+    List<String> getSpareItems();
+
     void insertSpare(SparesDTO sparesDTO);
 
     void updateSpareAsArchived(SparesDTO sparesDTO);
@@ -17,4 +19,6 @@ public interface ProductionRepository {
     List<SparePictureDTO> findAllSparePictures();
 
     long countSpares();
+
+    int addSpares(List<SparesDTO> spares);
 }
