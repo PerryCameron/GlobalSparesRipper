@@ -14,14 +14,13 @@ public class GSRipper {
 
     // nothing fancy, makes db from excel file
     public static void main(String[] args) {
-
         buildDatabase();
     }
 
     public static boolean buildDatabase() {
 
         // create a workbook of data
-        try (FileInputStream fis = new FileInputStream(ApplicationPaths.filePath.toString());
+        try (FileInputStream fis = new FileInputStream(ApplicationPaths.sourceExcel.toString());
              XSSFWorkbook workbook = new XSSFWorkbook(fis)) {
             // create the folder to hold database if it does not exist
             AppFileTools.getOrCreateGlobalSparesFolder();

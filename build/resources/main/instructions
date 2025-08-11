@@ -1,2 +1,13 @@
-// put new copy of global spares in L2 directory
-// first run ExcelRipper
+******************
+** GS RIPPER   ***
+******************
+// put new copy of the excel file global spares in:
+// C:\Users\sesa91827\Global Spares
+// first run GSRipper
+// this will create a new database rip from global spare excel file and put
+// in in: C:\Users\sesa91827\Global Spares\global-spares.db
+// it usually takes about 40 minutes to complete BUILD SUCCESSFUL in 39m 1s
+
+******************
+** GS UPDATER  ***
+******************

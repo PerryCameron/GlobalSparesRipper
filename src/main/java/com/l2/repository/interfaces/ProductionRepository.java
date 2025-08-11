@@ -15,4 +15,6 @@ public interface ProductionRepository {
     void appendCommentBySpareItem(String spareItem, String newComment);
 
     List<SparePictureDTO> findAllSparePictures();
+
+    long countSpares();
 }

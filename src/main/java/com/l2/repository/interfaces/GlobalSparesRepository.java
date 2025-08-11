@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface GlobalSparesRepository {
 
+    long countSpares();
+
     int insertProductToSpare(ProductToSparesDTO productToSpares);
 
     int insertConsolidatedProductToSpare(ProductToSparesDTO productToSpares);

@@ -20,23 +20,27 @@ public class GSUpdater {
         GlobalSparesRepositoryImpl globalSparesRepository = new GlobalSparesRepositoryImpl();
         ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
 
-        // This will add all the new ones
-        List<SparesDTO> sparesDTOS = globalSparesRepository.findSparesAdded("2025-04-07");
-        logger.info("Global Spares added are {}", sparesDTOS.size());
-        sparesDTOS.forEach(sparesDTO -> {
-//            productionRepository.insertSpare(sparesDTO);
-            System.out.println("insert ID: " + sparesDTO);
-        });
 
-        // This will archive the archived ones
-        List<SparesDTO> deletedFromSpares = globalSparesRepository.findSparesRemovedFromCatalogue("2025-04-07");
-        logger.info("Global Spares removed are {}", deletedFromSpares.size());
-        deletedFromSpares.forEach(sparesDTO -> {
-            System.out.println("delete: " + sparesDTO);
-//            productionRepository.updateSpareAsArchived(sparesDTO);
-        });
+        logger.info("{} spares found in newly created repo", globalSparesRepository.countSpares());
+        logger.info("{} spares found in production repo", productionRepository.countSpares());
+
+
+        // This will add all the new ones
+//        List<SparesDTO> sparesDTOS = globalSparesRepository.findSparesAdded("2025-04-07");
+//        logger.info("Global Spares added are {}", sparesDTOS.size());
+//        sparesDTOS.forEach(sparesDTO -> {
+////            productionRepository.insertSpare(sparesDTO);
+//            System.out.println("insert ID: " + sparesDTO);
+//        });
+//
+//        // This will archive the archived ones
+//        List<SparesDTO> deletedFromSpares = globalSparesRepository.findSparesRemovedFromCatalogue("2025-04-07");
+//        logger.info("Global Spares removed are {}", deletedFromSpares.size());
+//        deletedFromSpares.forEach(sparesDTO -> {
+//            System.out.println("delete: " + sparesDTO);
+////            productionRepository.updateSpareAsArchived(sparesDTO);
+//        });
     }
 }
 
 
-//

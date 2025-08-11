@@ -105,4 +105,16 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         }
     }
 
+    @Override
+    public long countSpares() {
+        try {
+            String sql = "SELECT COUNT(*) FROM spares";
+            Long count = jdbcTemplate.queryForObject(sql, Long.class);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            logger.error("Error counting records in spares table", e);
+            throw new RuntimeException("Failed to count spares", e);
+        }
+    }
+
 }

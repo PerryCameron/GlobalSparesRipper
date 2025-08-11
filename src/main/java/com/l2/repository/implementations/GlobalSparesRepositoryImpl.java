@@ -33,6 +33,18 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     }
 
     @Override
+    public long countSpares() {
+        try {
+            String sql = "SELECT COUNT(*) FROM spares";
+            Long count = jdbcTemplate.queryForObject(sql, Long.class);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            logger.error("Error counting records in spares table", e);
+            throw new RuntimeException("Failed to count spares", e);
+        }
+    }
+
+    @Override
     public int insertProductToSpare(ProductToSparesDTO productToSpares) {
         try {
             String sql = "INSERT INTO product_to_spares (" +
@@ -549,6 +561,15 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         }
     }
 
+    /**
+     * Retrieves a list of SparesDTO objects from the spares table where the items were added to the catalogue
+     * on a specific date.
+     *
+     * @param date The date (in string format) to filter spares by their added_to_catalogue date.
+     *             The date should match the format expected by the database (e.g., 'YYYY-MM-DD').
+     * @return A list of {@link SparesDTO} objects representing spares added on the specified date.
+     *         Returns an empty list if no spares match the criteria.
+     */
     @Override
     public List<SparesDTO> findSparesAdded(String date) {
         String sql = """

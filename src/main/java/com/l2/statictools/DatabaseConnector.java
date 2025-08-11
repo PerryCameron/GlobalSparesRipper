@@ -11,6 +11,7 @@ public class DatabaseConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
 
+    // this is the newly created database
     public static SQLiteDataSource getGlobalSparesDataSource(String caller) {
         String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/global-spares.db";
         SQLiteDataSource dataSource = new SQLiteDataSource();
@@ -26,8 +27,9 @@ public class DatabaseConnector {
         return dataSource;
     }
 
+    // this is the production database copied from application folder.
     public static SQLiteDataSource getProductionDataSource(String caller) {
-        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/Production/spares-production.db";
+        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/Production/global-spares.db";
         SQLiteDataSource dataSource = new SQLiteDataSource();
         dataSource.setUrl(DATABASE_URL);
 

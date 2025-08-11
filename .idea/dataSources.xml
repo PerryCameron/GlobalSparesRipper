@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="global-spares.db" uuid="64c10369-36db-4898-b3fa-c26b9b1e27d7">
+    <data-source source="LOCAL" name="New Spares Database" uuid="b3f5aaf5-f8b2-4eeb-bcdd-13803e2d1d18">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
@@ -11,11 +11,11 @@
       </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="spares-production.db" uuid="85c40f54-f014-468f-bd1c-0e4d7491f654">
+    <data-source source="LOCAL" name="Production Spares Database" uuid="8afbb0fe-dc13-47be-8963-e516c09763e5">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\sesa91827\Global Spares\Production\spares-production.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\sesa91827\Global Spares\Production\global-spares.db</jdbc-url>
       <jdbc-additional-properties>
         <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
       </jdbc-additional-properties>
