@@ -42,5 +42,21 @@ public class DatabaseConnector {
         }
         return dataSource;
     }
+
+    // this is the production database copied from application folder.
+    public static SQLiteDataSource getChangeSetDataSource(String caller) {
+        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/change_sets/change_set.sqlite";
+        SQLiteDataSource dataSource = new SQLiteDataSource();
+        dataSource.setUrl(DATABASE_URL);
+
+        try {
+            // Test the connection
+            dataSource.getConnection().close();
+            logger.info("Connection to {} has been established -> {}", caller, DATABASE_URL);
+        } catch (SQLException e) {
+            logger.error("Failed to establish SQLite connection to global spares database.", e);
+        }
+        return dataSource;
+    }
 }
 

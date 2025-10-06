@@ -2,9 +2,10 @@
 ** GS RIPPER   ***
 ******************
 // put new copy of the excel file global spares in:
-// C:\Users\sesa91827\Global Spares
+// C:\Users\sesa91827\Global Spares\Global Spares Catalogue.xlsx
 // first run GSRipper
 // this will create a new database rip from global spare excel file and put
+// TODO delete old one first
 // in in: C:\Users\sesa91827\Global Spares\global-spares.db
 // it usually takes about 40 minutes to complete BUILD SUCCESSFUL in 39m 1s
 
@@ -12,3 +13,10 @@
 ** GS UPDATER  ***
 ******************
 // finds the new spares added
+// Adds them to the new database
+
+// Finds duplicate notes created during ripping process
+// finds spares where archived was changed both ways and updates them (currently commented out)
+//
+
+// finds where comments have been changed and updates those.

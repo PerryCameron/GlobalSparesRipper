@@ -21,4 +21,6 @@ public interface ProductionRepository {
     long countSpares();
 
     int addSpares(List<SparesDTO> spares);
+
+    int updateSpares(List<SparesDTO> spares);
 }

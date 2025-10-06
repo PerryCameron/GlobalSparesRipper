@@ -10,6 +10,8 @@ public interface GlobalSparesRepository {
 
     List<String> getSpareItems();
 
+    List<SparesDTO> getAllSpares();
+
     long countSpares();
 
     int insertProductToSpare(ProductToSparesDTO productToSpares);
@@ -55,4 +57,6 @@ public interface GlobalSparesRepository {
     void appendCommentBySpareItem(String spareItem, String newComment);
 
     void insertSparePictures(List<SparePictureDTO> sparePictures);
+
+    int updateSpares(List<SparesDTO> spares);
 }

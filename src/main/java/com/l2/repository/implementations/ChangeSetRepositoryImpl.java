@@ -18,13 +18,13 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-public class ProductionRepositoryImpl implements ProductionRepository {
-    private static final Logger logger = LoggerFactory.getLogger(ProductionRepositoryImpl.class);
+public class ChangeSetRepositoryImpl implements ProductionRepository {
+    private static final Logger logger = LoggerFactory.getLogger(ChangeSetRepositoryImpl.class);
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public ProductionRepositoryImpl() {
-        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getProductionDataSource("Production Repo"));
+    public ChangeSetRepositoryImpl() {
+        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getChangeSetDataSource("Change Set Repo"));
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
     }
 

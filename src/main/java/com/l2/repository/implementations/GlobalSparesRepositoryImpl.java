@@ -81,6 +81,14 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     }
 
     @Override
+    public List<SparesDTO> getAllSpares() {
+        String sql = "SELECT * FROM spares";
+        List<SparesDTO> spares = namedParameterJdbcTemplate.query(sql, new SparesRowMapper());
+        logger.info("Retrieved {} SparesDTO objects from new database", spares.size());
+        return spares;
+    }
+
+    @Override
     public long countSpares() {
         try {
             String sql = "SELECT COUNT(*) FROM spares";
@@ -804,5 +812,50 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             logger.error("Error inserting spare pictures", e);
             throw new RuntimeException("Failed to insert spare pictures", e);
         }
+    }
+
+    @Override
+    public int updateSpares(List<SparesDTO> spares) {
+        if (spares == null || spares.isEmpty()) {
+            logger.info("No spares provided to update in production database.");
+            return 0;
+        }
+
+        String sql = "UPDATE spares SET pim = ?, replacement_item = ?, standard_exchange_item = ?, " +
+                "spare_description = ?, catalogue_version = ?, end_of_service_date = ?, " +
+                "last_update = ?, added_to_catalogue = ?, removed_from_catalogue = ?, " +
+                "comments = ?, keywords = ?, archived = ?, custom_add = ?, last_updated_by = ? " +
+                "WHERE spare_item = ?";
+
+        int[] rowsAffected = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                SparesDTO spare = spares.get(i);
+                ps.setString(1, spare.getPim());
+                ps.setString(2, spare.getReplacementItem());
+                ps.setString(3, spare.getStandardExchangeItem());
+                ps.setString(4, spare.getSpareDescription());
+                ps.setString(5, spare.getCatalogueVersion());
+                ps.setString(6, spare.getProductEndOfServiceDate());
+                ps.setString(7, spare.getLastUpdate());
+                ps.setString(8, spare.getAddedToCatalogue());
+                ps.setString(9, spare.getRemovedFromCatalogue());
+                ps.setString(10, spare.getComments());
+                ps.setString(11, spare.getKeywords());
+                ps.setInt(12, spare.getArchived() != null && spare.getArchived() ? 1 : 0);
+                ps.setInt(13, spare.getCustomAdd() != null && spare.getCustomAdd() ? 1 : 0);
+                ps.setString(14, spare.getLastUpdatedBy());
+                ps.setString(15, spare.getSpareItem());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return spares.size();
+            }
+        });
+
+        int totalRowsAffected = Arrays.stream(rowsAffected).sum();
+        logger.info("Updated {} spares in production database.", totalRowsAffected);
+        return totalRowsAffected;
     }
 }
