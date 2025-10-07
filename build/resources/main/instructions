@@ -20,3 +20,9 @@
 //
 
 // finds where comments have been changed and updates those.
+
+*********************
+** GS Change Set  ***
+*********************
+// TODO make this more robust, will only update items not previously updated.
+// put change set "C:\Users\sesa91827\Global Spares\change_sets\change_set.sqlite"

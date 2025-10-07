@@ -5,7 +5,7 @@ import com.l2.dto.SparesDTO;
 
 import java.util.List;
 
-public interface ProductionRepository {
+public interface ChangeSetRepository {
     List<String> getSpareItems();
 
     void insertSpare(SparesDTO sparesDTO);
@@ -24,13 +24,9 @@ public interface ProductionRepository {
 
     int updateSpares(List<SparesDTO> spares);
 
-    SparesDTO getBySpareItem(String spareItem);
-
     boolean existsBySpareName(String spareName);
-
-    long insertSparePicture(SparePictureDTO sparePictureDTO);
 
     SparePictureDTO getPictureBySpareName(String spareName);
 
-    int updateSpare(SparesDTO spare);
+    long insertSparePicture(SparePictureDTO sparePictureDTO);
 }

@@ -2,23 +2,26 @@ package com.l2.repository.implementations;
 
 import com.l2.dto.SparePictureDTO;
 import com.l2.dto.SparesDTO;
-import com.l2.repository.interfaces.ProductionRepository;
+import com.l2.repository.interfaces.ChangeSetRepository;
 import com.l2.repository.rowmappers.SparePictureRowMapper;
 import com.l2.repository.rowmappers.SparesRowMapper;
 import com.l2.statictools.DatabaseConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-public class ChangeSetRepositoryImpl implements ProductionRepository {
+public class ChangeSetRepositoryImpl implements ChangeSetRepository {
     private static final Logger logger = LoggerFactory.getLogger(ChangeSetRepositoryImpl.class);
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
@@ -228,6 +231,39 @@ public class ChangeSetRepositoryImpl implements ProductionRepository {
         int totalRowsAffected = Arrays.stream(rowsAffected).sum();
         logger.info("Updated {} spares in production database.", totalRowsAffected);
         return totalRowsAffected;
+    }
+
+    @Override
+    public boolean existsBySpareName(String spareName) {
+        String sql = "SELECT COUNT(*) FROM spare_pictures WHERE spare_name = ?";
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareName);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public SparePictureDTO getPictureBySpareName(String spareName) {
+        String sql = "SELECT * FROM spare_pictures WHERE spare_name = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new SparePictureRowMapper(), spareName);
+        } catch (EmptyResultDataAccessException e) {
+            return null; // or throw new SparePictureNotFoundException("Spare picture not found for spare_name: " + spareName);
+        }
+    }
+
+    @Override
+    public long insertSparePicture(SparePictureDTO sparePictureDTO) {
+        String sql = "INSERT INTO spare_pictures (spare_name, picture) VALUES (?, ?)";
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
+            ps.setString(1, sparePictureDTO.getSpareName());
+            ps.setBytes(2, sparePictureDTO.getPicture());
+            return ps;
+        }, keyHolder);
+
+        return keyHolder.getKey().longValue();
     }
 
 }

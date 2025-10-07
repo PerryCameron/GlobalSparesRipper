@@ -10,7 +10,6 @@ public class SparePictureRowMapper implements RowMapper<SparePictureDTO> {
     public SparePictureDTO mapRow(ResultSet rs, int rowNum) throws SQLException {
         return new SparePictureDTO(
                 rs.getLong("id"),
-                rs.getLong("spare_id"),
                 rs.getString("spare_name"),
                 rs.getBytes("picture")
         );

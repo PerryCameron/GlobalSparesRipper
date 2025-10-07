@@ -9,9 +9,12 @@ import com.l2.statictools.DatabaseConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -230,4 +233,81 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         return totalRowsAffected;
     }
 
+    @Override
+    public SparesDTO getBySpareItem(String spareItem) {
+        String sql = "SELECT * FROM spares WHERE spare_item = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new SparesRowMapper(), spareItem);
+        } catch (EmptyResultDataAccessException e) {
+            return null; // or throw a custom exception, e.g., new SparesNotFoundException("Spare item not found: " + spareItem);
+        }
+    }
+
+    @Override
+    public boolean existsBySpareName(String spareName) {
+        String sql = "SELECT COUNT(*) FROM spare_pictures WHERE spare_name = ?";
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareName);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public long insertSparePicture(SparePictureDTO sparePictureDTO) {
+        String sql = "INSERT INTO spare_pictures (spare_name, picture) VALUES (?, ?)";
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
+            ps.setString(1, sparePictureDTO.getSpareName());
+            ps.setBytes(2, sparePictureDTO.getPicture());
+            return ps;
+        }, keyHolder);
+
+        return keyHolder.getKey().longValue();
+    }
+
+    @Override
+    public SparePictureDTO getPictureBySpareName(String spareName) {
+        String sql = "SELECT * FROM spare_pictures WHERE spare_name = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new SparePictureRowMapper(), spareName);
+        } catch (EmptyResultDataAccessException e) {
+            return null; // or throw new SparePictureNotFoundException("Spare picture not found for spare_name: " + spareName);
+        }
+    }
+
+    @Override
+    public int updateSpare(SparesDTO spare) {
+        if (spare == null) {
+            logger.info("No spare provided to update in production database.");
+            return 0;
+        }
+
+        String sql = "UPDATE spares SET pim = ?, replacement_item = ?, standard_exchange_item = ?, " +
+                "spare_description = ?, catalogue_version = ?, end_of_service_date = ?, " +
+                "last_update = ?, added_to_catalogue = ?, removed_from_catalogue = ?, " +
+                "comments = ?, keywords = ?, archived = ?, custom_add = ?, last_updated_by = ? " +
+                "WHERE spare_item = ?";
+
+        int rowsAffected = jdbcTemplate.update(sql,
+                spare.getPim(),
+                spare.getReplacementItem(),
+                spare.getStandardExchangeItem(),
+                spare.getSpareDescription(),
+                spare.getCatalogueVersion(),
+                spare.getProductEndOfServiceDate(),
+                spare.getLastUpdate(),
+                spare.getAddedToCatalogue(),
+                spare.getRemovedFromCatalogue(),
+                spare.getComments(),
+                spare.getKeywords(),
+                spare.getArchived() != null && spare.getArchived() ? 1 : 0,
+                spare.getCustomAdd() != null && spare.getCustomAdd() ? 1 : 0,
+                spare.getLastUpdatedBy(),
+                spare.getSpareItem()
+        );
+
+        logger.info("Updated {} spare in production database.", rowsAffected);
+        return rowsAffected;
+    }
 }
