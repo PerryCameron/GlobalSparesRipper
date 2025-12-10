@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 
 public class GSUpdater {
     private static final Logger logger = LoggerFactory.getLogger(GSUpdater.class);
-//    private static final GlobalSparesRepositoryImpl globalSparesRepository = new GlobalSparesRepositoryImpl();
-//    private static final ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
 
     public static void main(String[] args) {
         updateDataBase();
@@ -157,7 +155,7 @@ private static void updateDataBase() {
                 })
                 .toList();
 
-        logger.info("Found {} spares with different",
+        logger.info("Found {} spares with different comments",
                 differentCommentsSpares.size());
 
         return differentCommentsSpares;

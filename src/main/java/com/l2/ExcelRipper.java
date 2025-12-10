@@ -8,10 +8,7 @@ import com.l2.dto.ReplacementCrDTO;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import org.apache.poi.ooxml.POIXMLProperties;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,9 +59,9 @@ public class ExcelRipper {
         logger.info("Consolidating Archived Product to Spares");
         consolidateWithJSON(true, globalSparesRepository);
 
-        addReplacmentCRstoNotes();
+//        addReplacmentCRstoNotes();
         // print all spares we caste aside
-        editedSpares.forEach(System.out::println);
+//        editedSpares.forEach(System.out::println);
         return true;
     }
 
@@ -165,124 +162,291 @@ public class ExcelRipper {
         }
     }
 
-    private static void extractReplacementCr(Sheet sheet, ReplacementCrDTO replacementCrDTO, GlobalSparesRepository globalSparesRepository) {
-        // Iterate through the first 10 rows
-        for (Row row : sheet) {
-            // this is temp for testing
-//            if (row.getRowNum() >= 1000) {
-//                break; // Stop after 300 rows
-//            }
-            // we will not start writing until we get to row three
-            if (row.getRowNum() < 3) {
-                continue;
-            }
-            // start rowCount when we begin
 
-            int colCount = 0;
-            for (Cell cell : row) {
-                String cellValue = getCellValueAsString(cell);
-                switch (colCount) {
-                    case 0 -> replacementCrDTO.setItem(cellValue);
-                    case 1 -> replacementCrDTO.setReplacement(cellValue);
-                    case 2 -> replacementCrDTO.setComment(cellValue);
-                    case 3 -> {
-                        try {
-                            if (!cellValue.isEmpty())
-                                replacementCrDTO.setOldQty(Double.parseDouble(cellValue));
-                            else
-                                replacementCrDTO.setOldQty(0.0);
-                        } catch (Exception e) {
-                            logger.error(e.getMessage());
-                            e.printStackTrace();
-                            replacementCrDTO.setOldQty(99999.0);
-                        }
+    private static void extractReplacementCr(
+            Sheet sheet,
+            ReplacementCrDTO replacementCrDTO,
+            GlobalSparesRepository globalSparesRepository) {
+
+        DataFormatter formatter = new DataFormatter(); // formats like Excel
+
+        // Define how many columns you expect in this sheet
+        final int expectedCols = 5; // columns 0..4 (Item, Replacement, Comment, OldQty, NewQty)
+
+        for (int r = sheet.getFirstRowNum(); r <= sheet.getLastRowNum(); r++) {
+            // if (r >= 1000) break; // temp throttle if needed
+            if (r < 3) continue;
+
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+
+            // Reset DTO for this row
+            replacementCrDTO.clear();
+
+            for (int col = 0; col < expectedCols; col++) {
+                Cell cell = row.getCell(col, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+
+                // Prefer numeric parsing for qty columns, but keep a string for others
+                String cellText = formatter.formatCellValue(cell).trim();
+
+                switch (col) {
+                    case 0 -> replacementCrDTO.setItem(cellText);
+                    case 1 -> replacementCrDTO.setReplacement(cellText);
+                    case 2 -> replacementCrDTO.setComment(cellText);
+
+                    case 3 -> { // OldQty
+                        // If the cell type is numeric, read it directly; else try parsing the text
+                        Double val = parseDoubleCell(cell, cellText, 0.0);
+                        replacementCrDTO.setOldQty(val);
                     }
-                    case 4 -> {
-                        try {
-                            if (!cellValue.isEmpty())
-                                replacementCrDTO.setNewQty(Double.parseDouble(cellValue));
-                            else
-                                replacementCrDTO.setNewQty(0.0);
-                        } catch (Exception e) {
-                            logger.error(e.getMessage());
-                            e.printStackTrace();
-                            replacementCrDTO.setNewQty(99999.0);
-                        }
+
+                    case 4 -> { // NewQty
+                        Double val = parseDoubleCell(cell, cellText, 0.0);
+                        replacementCrDTO.setNewQty(val);
                     }
-                }
-                colCount++;
-                if (row.getRowNum() % 100 == 0 && colCount == 1) {
-                    logger.info("{} ", row.getRowNum());
+
+                    default -> { /* ignore extras */ }
                 }
             }
-            // Print the row
-            if (!replacementCrDTO.getItem().isEmpty())
+
+            // Write only if item is present
+            if (replacementCrDTO.getItem() != null && !replacementCrDTO.getItem().isEmpty()) {
                 globalSparesRepository.insertReplacementCr(replacementCrDTO);
-            replacementCrDTO.clear();
+            }
         }
     }
 
-    private static void extractProductToSpares(Sheet sheet, ProductToSparesDTO productToSpares, GlobalSparesRepository globalSparesRepository, boolean isArchived) {
-        // Iterate through the first 10 rows
-        for (Row row : sheet) {
-            // this is temp for testing
-//            if (row.getRowNum() >= 300) {
-//                break; // Stop after 300 rows
-//            }
-            // we will not start writing until we get to row three
-            if (row.getRowNum() < 3) {
-                continue;
+    // Helper: try numeric cell first, else parse string; on error return fallback
+    private static Double parseDoubleCell(Cell cell, String cellText, double fallback) {
+        try {
+            if (cell != null && cell.getCellType() == CellType.NUMERIC) {
+                return cell.getNumericCellValue();
             }
-            // start rowCount when we begin
+            if (!cellText.isEmpty()) {
+                return Double.parseDouble(cellText);
+            }
+            return fallback;
+        } catch (Exception e) {
+            // log and return a sentinel if you prefer, or fallback to 0.0
+            // logger.error("Qty parse failed at row {}, col {}: {}", cell.getRowIndex(), cell.getColumnIndex(), e.getMessage());
+            return 99999.0; // or fallback
+        }
+    }
 
-            int colCount = 0;
-            for (Cell cell : row) {
-                String cellValue = getCellValueAsString(cell);
-                switch (colCount) {
-                    case 0 -> {
-                        productToSpares.setPimRange(cellValue);
-                        productToSpares.setArchived(isArchived);
-                        productToSpares.setCustomAdd(false);
-                    }
+
+//    private static void extractReplacementCr(Sheet sheet, ReplacementCrDTO replacementCrDTO, GlobalSparesRepository globalSparesRepository) {
+//        // Iterate through the first 10 rows
+//        for (Row row : sheet) {
+//            // this is temp for testing
+////            if (row.getRowNum() >= 1000) {
+////                break; // Stop after 300 rows
+////            }
+//            // we will not start writing until we get to row three
+//            if (row.getRowNum() < 3) {
+//                continue;
+//            }
+//            // start rowCount when we begin
+//
+//            int colCount = 0;
+//            for (Cell cell : row) {
+//                String cellValue = getCellValueAsString(cell);
+//                switch (colCount) {
+//                    case 0 -> replacementCrDTO.setItem(cellValue);
+//                    case 1 -> replacementCrDTO.setReplacement(cellValue);
+//                    case 2 -> replacementCrDTO.setComment(cellValue);
+//                    case 3 -> {
+//                        try {
+//                            if (!cellValue.isEmpty())
+//                                replacementCrDTO.setOldQty(Double.parseDouble(cellValue));
+//                            else
+//                                replacementCrDTO.setOldQty(0.0);
+//                        } catch (Exception e) {
+//                            logger.error(e.getMessage());
+//                            e.printStackTrace();
+//                            replacementCrDTO.setOldQty(99999.0);
+//                        }
+//                    }
+//                    case 4 -> {
+//                        try {
+//                            if (!cellValue.isEmpty())
+//                                replacementCrDTO.setNewQty(Double.parseDouble(cellValue));
+//                            else
+//                                replacementCrDTO.setNewQty(0.0);
+//                        } catch (Exception e) {
+//                            logger.error(e.getMessage());
+//                            e.printStackTrace();
+//                            replacementCrDTO.setNewQty(99999.0);
+//                        }
+//                    }
+//                }
+//                colCount++;
+//                if (row.getRowNum() % 100 == 0 && colCount == 1) {
+//                    logger.info("{} ", row.getRowNum());
+//                }
+//            }
+//            // Print the row
+//            if (!replacementCrDTO.getItem().isEmpty())
+//                globalSparesRepository.insertReplacementCr(replacementCrDTO);
+//            replacementCrDTO.clear();
+//        }
+//    }
+
+//    private static void extractProductToSpares(Sheet sheet, ProductToSparesDTO productToSpares, GlobalSparesRepository globalSparesRepository, boolean isArchived) {
+//        // Iterate through the first 10 rows
+//        for (Row row : sheet) {
+//            // this is temp for testing
+//            if (row.getRowNum() >= 1300) {
+//                break; // Stop after 1300 rows
+//            }
+//            // we will not start writing until we get to row three
+//            if (row.getRowNum() < 3) {
+//                continue;
+//            }
+//            // start rowCount when we begin
+//
+//            int colCount = 0;
+//            for (Cell cell : row) {
+//                String cellValue = getCellValueAsString(cell);
+//
+//                if(row.getRowNum() > 800) {
+//                    if(colCount == 0) {
+//                        System.out.println();
+//                        System.out.print("Row: " + row.getRowNum());
+//                    }
+//                    System.out.print(" " + colCount + ") " + cellValue + " ");
+//                }
+//
+//                switch (colCount) {
+//                    case 0 -> {
+//                        productToSpares.setPimRange(cellValue);
+//                        productToSpares.setArchived(isArchived);
+//                        productToSpares.setCustomAdd(false);
+//                    }
+//                    case 1 -> productToSpares.setPimProductFamily(cellValue);
+//                    case 2 -> productToSpares.setSpareItem(cellValue);
+//                    case 3 -> productToSpares.setReplacementItem(cellValue); // here is where it goes wrong
+//                    case 4 -> {
+//                        if(cellValue.equals("Standard Offer")) {  // standard offer should be 6?
+//                            System.out.println();
+//                            logger.error("Failure! column count= {} row number = {}", colCount, row.getRowNum());
+//                            exit(1);
+//                        }
+//                        productToSpares.setStandardExchangeItem(cellValue);
+//                    }
+//                    case 5 -> productToSpares.setSpareDescription(cellValue);
+//                    case 6 -> productToSpares.setCatalogueVersion(cellValue);
+//                    case 7 -> productToSpares.setProductEndOfServiceDate(cellValue);
+//                    case 8 -> {
+//                        if (isArchived)
+//                            productToSpares.setRemovedFromCatalogue(cellValue);
+//                        else
+//                            productToSpares.setLastUpdate(cellValue);
+//                    }
+//                    case 9 -> {
+//                        if (isArchived)
+//                            productToSpares.setComments(cellValue);
+//                        else
+//                            productToSpares.setAddedToCatalogue(cellValue);
+//                    }
+//                    case 10 -> {
+//                        if (!isArchived)
+//                            if(cellValue.isEmpty())
+//                                productToSpares.setComments(null);
+//                            else
+//                                productToSpares.setComments(cellValue);
+//                    }
+//                }
+////                if (row.getRowNum() < 5)
+////                    System.out.println(colCount + ") " + cellValue);
+//                colCount++;
+////                if (row.getRowNum() % 100 == 0 && colCount == 1) {
+////                    logger.info("{} ", row.getRowNum());
+////                }
+//            }
+//            // Print the row
+//            globalSparesRepository.insertProductToSpare(productToSpares);
+//            productToSpares.clear();
+//        }
+//    }
+
+
+    private static void extractProductToSpares(
+            Sheet sheet,
+            ProductToSparesDTO productToSpares,
+            GlobalSparesRepository globalSparesRepository,
+            boolean isArchived) {
+
+        DataFormatter formatter = new DataFormatter(); // formats numbers/dates like Excel shows them
+
+        // Start from row 3 (0-based indexing), stop at 1300
+        for (int r = sheet.getFirstRowNum(); r <= sheet.getLastRowNum(); r++) {
+//            if (r >= 1300) break;
+            if (r < 3) continue;
+
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+
+            // If you know exactly how many columns you expect, hard-code it for stability.
+            // Based on your printout you have at least 13 columns (0..12).
+            int expectedCols = 13;
+
+            // Reset DTO for this row
+            productToSpares.clear();
+            productToSpares.setArchived(isArchived);
+            productToSpares.setCustomAdd(false);
+
+            for (int col = 0; col < expectedCols; col++) {
+                // CREATE_NULL_AS_BLANK ensures we get a blank cell for missing entries
+                Cell cell = row.getCell(col, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                String cellValue = formatter.formatCellValue(cell).trim();
+
+//                if (r > 800) {
+//                    if (col == 0) {
+//                        System.out.println();
+//                        System.out.print("Row: " + r);
+//                    }
+//                    System.out.print(" " + col + ") " + cellValue + " ");
+//                }
+
+                switch (col) {
+                    case 0 -> productToSpares.setPimRange(cellValue);
                     case 1 -> productToSpares.setPimProductFamily(cellValue);
                     case 2 -> productToSpares.setSpareItem(cellValue);
                     case 3 -> productToSpares.setReplacementItem(cellValue);
-                    case 4 -> productToSpares.setStandardExchangeItem(cellValue);
+                    case 4 -> {
+                        // In your sample "Standard Offer" belongs to column 6, not 4.
+                        // This mapping will remain correct now because blanks are preserved.
+                        productToSpares.setStandardExchangeItem(cellValue);
+                    }
                     case 5 -> productToSpares.setSpareDescription(cellValue);
-                    case 6 -> productToSpares.setCatalogueVersion(cellValue);
+                    case 6 -> productToSpares.setCatalogueVersion(cellValue); // if "Standard Offer" is catalogue version
                     case 7 -> productToSpares.setProductEndOfServiceDate(cellValue);
                     case 8 -> {
-                        if (isArchived)
-                            productToSpares.setRemovedFromCatalogue(cellValue);
-                        else
-                            productToSpares.setLastUpdate(cellValue);
+                        if (isArchived) productToSpares.setRemovedFromCatalogue(cellValue);
+                        else productToSpares.setLastUpdate(cellValue);
                     }
                     case 9 -> {
-                        if (isArchived)
-                            productToSpares.setComments(cellValue);
-                        else
-                            productToSpares.setAddedToCatalogue(cellValue);
+                        if (isArchived) productToSpares.setComments(cellValue);
+                        else productToSpares.setAddedToCatalogue(cellValue);
                     }
                     case 10 -> {
-                        if (!isArchived)
-                            if(cellValue.isEmpty())
-                                productToSpares.setComments(null);
-                            else
-                                productToSpares.setComments(cellValue);
+                        if (!isArchived) {
+                            productToSpares.setComments(cellValue.isEmpty() ? null : cellValue);
+                        }
+                    }
+                    // If you need 11/12 (you printed them), add mappings here:
+                    // case 11 -> productToSpares.setKeywords(cellValue);
+                    // case 12 -> productToSpares.setLastUpdatedBy(cellValue);
+                    default -> {
+                        // ignore extra columns or log as needed
                     }
                 }
-                if (row.getRowNum() < 5)
-                    System.out.println(colCount + ") " + cellValue);
-                colCount++;
-                if (row.getRowNum() % 100 == 0 && colCount == 1) {
-                    logger.info("{} ", row.getRowNum());
-                }
             }
-            // Print the row
+
             globalSparesRepository.insertProductToSpare(productToSpares);
-            productToSpares.clear();
         }
     }
+
 
     public static String getCellValueAsString(Cell cell) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");

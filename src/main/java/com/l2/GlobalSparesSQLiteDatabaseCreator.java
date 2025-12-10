@@ -101,14 +101,14 @@ public class GlobalSparesSQLiteDatabaseCreator {
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Easy UPS 3M', '3ph', 'Easy UPS 3M,3MUPS', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Easy UPS 3S', '3ph', 'Easy UPS 3S,3SUPS', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy 3500', '3ph', 'Galaxy 3500,G35T', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy RPP', '3ph', 'RPP', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy RPP', '3ph', 'GRPPIP2X84,GRPPIP2X89,GRPPNF84,GRPPNF89,GRPPNQ84,GRPPNQ89', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy VL', '3ph', 'Galaxy VL', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy VM', '3ph', 'Galaxy VM,0G-GVM', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy VS', '3ph', 'Galaxy VS', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy VX', '3ph', 'Galaxy VX', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Li-Ion Batteries (Galaxy)', '3ph', 'Galaxy Lithium Ion Battery Systems', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Li-Ion Batteries (Samsung)', '3ph', 'Lithium Ion Battery Systems', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE EPS 6000', '3ph', 'MGE EPS 6000,E6TUPS800', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Li-Ion Batteries (Galaxy)', '3ph', 'Galaxy Lithium Ion Battery Systems,Lithium Ion Battery Systems', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Li-Ion Batteries (Samsung)', '3ph', 'Lithium Ion Battery Systems 1st Gen,Lithium Ion Battery Systems 2nd Gen,Lithium Ion Battery Systems', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE EPS 6000', '3ph', 'MGE EPS 6000,E6TUPS800,MGE EPS 6000 Parallel,MGE EPS 6000 Unitary', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE EPS 8000', '3ph', 'MGE EPS 8000', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE EPSILON STS', '3ph', 'MGE EPSILON STS', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE Galaxy 4000', '3ph', 'MGE Galaxy 4000', CURRENT_TIMESTAMP, null);
@@ -120,11 +120,14 @@ public class GlobalSparesSQLiteDatabaseCreator {
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('MGE UPSILON', '3ph', 'MGE UPSILON', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Power Distribution', '3ph', '0G-PD', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra ISX PDU', '3ph', '0G-PD150G6FX,Power Distribution Units', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra LX', '1ph', 'Symmetra LX', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra LX', '1ph', 'Symmetra LX,Symmetra Power Module,Symmetra Battery Systems', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra MW', '3ph', 'Symmetra MW', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX 250/500', '3ph', 'Symmetra PX 500kW,Symmetra PX 250kW,Maintenance Bypass Left,Maintenance Bypass Right', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX1', '3ph', 'Symmetra PX 40kW', CURRENT_TIMESTAMP, null);
-                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX2', '3ph', 'Symmetra PX 100kW Frame', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX1', '3ph', 'ISX20K,SY%0K40,SY%0K80,Symmetra PX Accessories,Symmetra PX 40kW Frame,Symmetra PX 80kW Frame', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra PX2', '3ph', 'Symmetra PX 100kW Frame,Battery Module Frame Symmetra PX 100kW', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Symmetra ISX PDU', '3ph', '0G-PD150G6FX,Power Distribution Units,PDUM160H-B,PDUM160H-BX567', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Smart-UPS Modular Ultra', '3ph', 'Smart-UPS Modular Ultra,Smart-UPS Modular Ultra Accessories', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Galaxy VXL', '3ph', 'Galaxy VXL', CURRENT_TIMESTAMP, null);
                 """;
 
         try (Connection conn = DriverManager.getConnection(url);
