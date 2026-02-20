@@ -1,7 +1,7 @@
 package com.l2.main;
 
 
-import interfaces.Controller;
+import com.l2.interfaces.Controller;
 import javafx.scene.layout.Region;
 
 
@@ -10,13 +10,12 @@ public class MainController extends Controller<MainMessage> {
     private final MainView mainView;
     private final MainModel mainModel;
 
-    public MainController(String peerIp) {
+    public MainController() {
         mainModel = new MainModel();
-        mainInteractor = new MainInteractor(mainModel, peerIp);
+        mainInteractor = new MainInteractor(mainModel);
         mainView = new MainView(mainModel, this::action);
 
         // Auto-start P2P
-        mainInteractor.startP2PConnection();
     }
 
     @Override
@@ -26,12 +25,7 @@ public class MainController extends Controller<MainMessage> {
 
     @Override
     public void action(MainMessage actionEnum) {
-        if (actionEnum == MainMessage.SEND_MESSAGE) {
-            mainInteractor.sendChatMessage();
-        }
+
     }
 
-    public void shutdown() {
-        mainInteractor.shutdownP2P();
-    }
 }

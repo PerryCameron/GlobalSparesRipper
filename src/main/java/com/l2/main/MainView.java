@@ -25,29 +25,8 @@ public class MainView implements Builder<Region> {
 
     @Override
     public Region build() {
-        TextArea messageArea = new TextArea();
-        messageArea.setEditable(false);
-        messageArea.textProperty().bind(mainModel.chatLogProperty());
-
-        TextField inputField = new TextField();
-        inputField.textProperty().bindBidirectional(mainModel.inputMessageProperty());
-        inputField.setPromptText("Type message...");
-
-        Button sendButton = new Button("Send");
-        sendButton.setDefaultButton(true);
-        sendButton.setOnAction(e -> action.accept(MainMessage.SEND_MESSAGE));
-
-        HBox inputBox = new HBox(10, inputField, sendButton);
-        inputBox.setPadding(new Insets(10));
-
-        Label title = new Label("P2P Chat (VPN)");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-
-        VBox root = new VBox(10, title, messageArea, inputBox);
-        root.setPadding(new Insets(15));
-
         BorderPane borderPane = new BorderPane();
-        borderPane.setCenter(root);
+        //borderPane.setCenter(root);
         return borderPane;
     }
 }
