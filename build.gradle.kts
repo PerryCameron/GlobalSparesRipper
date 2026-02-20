@@ -17,7 +17,7 @@ version = gitVersion()
 
 application {
     // Define the main class for the application
-    mainClass.set("com.L2.BaseApplication")  // Replace with your actual main class
+    mainClass.set("com.l2.Main")  // Replace with your actual main class
 }
 
 tasks.jar {
@@ -72,20 +72,20 @@ tasks.withType<JavaCompile> {
 
 // Create the fat JAR using shadowJar
 tasks.named<ShadowJar>("shadowJar") {
-    archiveBaseName.set("TSENotes")  // Set the base name for the fat JAR
+    archiveBaseName.set("GlobalSparesRipper")  // Set the base name for the fat JAR
     archiveVersion.set("")           // Remove the version from the file name
     archiveClassifier.set("all")     // Add "all" as the classifier to indicate a fat JAR
     manifest {
-        attributes["Main-Class"] = "com.L2.BaseApplication"  // Ensure the manifest has the correct main class
+        attributes["Main-Class"] = "com.l2.Main"  // Ensure the manifest has the correct main class
     }
 }
 
 tasks.jar {
     manifest {
-        archiveBaseName.set("TSENotes")
+        archiveBaseName.set("GlobalSparesRipper")
         archiveVersion.set("")
         archiveClassifier.set("")
-        attributes["Main-Class"] = "com.L2.BaseApplication"
+        attributes["Main-Class"] = "com.l2.Main"
     }
 }
 
@@ -98,12 +98,12 @@ tasks.register<Exec>("generateRuntime") {
     }
 
     commandLine(
-        "C:/Users/sesa91827/.jdks/jdk-21.0.6-full/bin/jlink.exe",  // Updated path
-        "--module-path", "C:/Users/sesa91827/.jdks/jdk-21.0.6-full/jmods",
+        "C:/Users/sesa91827/.jdks/jdk-21.0.10-full/bin/jlink.exe",  // Updated path
+        "--module-path", "C:/Users/sesa91827/.jdks/jdk-21.0.10-full/jmods",
         "--add-modules", "java.base,java.desktop,java.prefs,java.sql.rowset,javafx.controls,jdk.unsupported",
         "--output", "build/runtime",
         "--strip-debug",
-        "--compress", "2",
+        "--compress=zip-9", // Updated to new syntax
         "--no-header-files",
         "--no-man-pages"
     )
@@ -116,24 +116,24 @@ tasks.register<Exec>("packageApp") {
     description = "Packages the application with a bundled JRE using jpackage"
 
     doFirst {
-        delete(file("build/jpackage/TSENotes"))
+        delete(file("build/jpackage/GlobalSparesRipper"))
     }
 
     // Directly point to the jpackage tool in your Java 21 SDK
     commandLine(
-        "C:/Users/sesa91827/.jdks/jdk-21.0.6-full/bin/jpackage",  // Path to your jpackage
+        "C:/Users/sesa91827/.jdks/jdk-21.0.10-full/bin/jpackage",  // Path to your jpackage
         "--input",
         "build/libs",  // Path to the JAR file directory
         "--main-jar",
-        "TSENotes-all.jar",  // Replace with your actual JAR name
+        "GlobalSparesRipper-all.jar",  // Replace with your actual JAR name
         "--main-class",
-        "com.L2.BaseApplication",  // Replace with your actual main class
+        "com.l2.Main",  // Replace with your actual main class
         "--name",
-        "TSENotes",  // Name of the app
+        "GlobalSparesRipper",  // Name of the app
         "--type",
         "app-image",  // You can also use pkg, dmg, exe, etc.
         "--runtime-image",
-        "C:/Users/sesa91827/.jdks/jdk-21.0.6-full",  // Path to Java 21 runtime image
+        "C:/Users/sesa91827/.jdks/jdk-21.0.10-full",  // Path to Java 21 runtime image
         "--dest",
         "build/jpackage",  // Output destination
         "--icon",
@@ -141,30 +141,30 @@ tasks.register<Exec>("packageApp") {
     )
 }
 
-tasks.register<Exec>("packageAppInstallerWindows") {
-    group = "build"
-    description = "Packages the application with a bundled JRE using jpackage for Windows"
-
-    doFirst {
-        delete(file("build/jpackage/TSENotesInstaller"))
-    }
-
-    commandLine(
-        "C:/Users/sesa91827/.jdks/jdk-21.0.6-full/bin/jpackage",
-        "--input", "build/libs",
-        "--main-jar", "TSENotes-all.jar",
-        "--main-class", "com.L2.BaseApplication",
-        "--name", "TSENotes",
-        "--type", "exe",  // You can also use "msi" for a Windows installer
-        "--runtime-image", "C:/Users/sesa91827/.jdks/jdk-21.0.6-full",
-        "--dest", "build/jpackage/TSENotesInstaller",
-        "--install-dir", System.getenv("UserProfile") + "/TSENotes",  // Install in user's home directory
-        "--icon", "src/main/resources/images/TSELogo.ico",  // Path to your ICO file for Windows
-        "--win-menu",  // Adds an entry to the Start Menu
-        "--win-shortcut",  // Creates a desktop shortcut
-        "--win-console"  // Optional: Displays console output
-    )
-}
+//tasks.register<Exec>("packageAppInstallerWindows") {
+//    group = "build"
+//    description = "Packages the application with a bundled JRE using jpackage for Windows"
+//
+//    doFirst {
+//        delete(file("build/jpackage/GlobalSparesRipperInstaller"))
+//    }
+//
+//    commandLine(
+//        "C:/Users/sesa91827/.jdks/jdk-21.0.10-full/bin/jpackage",
+//        "--input", "build/libs",
+//        "--main-jar", "GlobalSparesRipper-all.jar",
+//        "--main-class", "com.l2.Main",
+//        "--name", "GlobalSparesRipper",
+//        "--type", "exe",  // You can also use "msi" for a Windows installer
+//        "--runtime-image", "C:/Users/sesa91827/.jdks/jdk-21.0.10-full",
+//        "--dest", "build/jpackage/GlobalSparesRipperInstaller",
+//        "--install-dir", System.getenv("UserProfile") + "/TSENotes",  // Install in user's home directory
+//        "--icon", "src/main/resources/images/TSELogo.ico",  // Path to your ICO file for Windows
+//        "--win-menu",  // Adds an entry to the Start Menu
+//        "--win-shortcut",  // Creates a desktop shortcut
+//        "--win-console"  // Optional: Displays console output
+//    )
+//}
 
 tasks.register("generateBuildInfoProperties") {
     doLast {
@@ -194,7 +194,7 @@ tasks.test {
 
 // Ensure generateRuntime runs before packageApp
 tasks.named("packageApp") {
-    dependsOn("generateRuntime")
+    dependsOn("shadowJar", "generateRuntime")   // ← add shadowJar here
 }
 
 // so after running

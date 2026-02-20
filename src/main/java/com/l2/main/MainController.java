@@ -14,8 +14,6 @@ public class MainController extends Controller<MainMessage> {
         mainModel = new MainModel();
         mainInteractor = new MainInteractor(mainModel);
         mainView = new MainView(mainModel, this::action);
-
-        // Auto-start P2P
     }
 
     @Override
