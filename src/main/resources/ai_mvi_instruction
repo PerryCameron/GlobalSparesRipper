@@ -1,0 +1,80 @@
+// I have a JavaFX application
+// It uses the MVCI pattern
+// if the name of your MVCI is main then name them MainController, MainInteractor, MainModel, MainView
+
+public class MainModel {
+	// this is where the data goes
+}
+
+public class MainView implements Builder<Region> {
+	// this is the UI code it reflects the state of the data in the model
+	// it can also write to the data in the model and send a signal with the Consumer<MainMessage> action to the controller
+    private final MainModel mainModel;
+    private final Consumer<MainMessage> action;
+
+    public MainView(MainModel mainModel, Consumer<MainMessage> action) {
+        this.mainModel = mainModel;
+        this.action = action;
+    }
+
+    @Override
+    public Region build() {
+        BorderPane borderPane = new BorderPane();
+        //borderPane.setCenter(root);
+        return borderPane;
+    }
+}
+
+public class MainController extends Controller<MainMessage> {
+	// This is the framework of the app.  All contollers can talk to other controllers through the main controllers
+	// when a user clicks a control in the view it sends a signal to the action function, which is a switch(action) and each case calls a method in the interacter to perform a task
+    private final MainInteractor mainInteractor;
+    private final MainView mainView;
+    private final MainModel mainModel;
+
+    public MainController() {
+        mainModel = new MainModel();
+        mainInteractor = new MainInteractor(mainModel);
+        mainView = new MainView(mainModel, this::action);
+    }
+
+    @Override
+    public Region getView() {
+        return mainView.build();
+    }
+
+    @Override
+    public void action(MainMessage actionEnum) {
+
+    }
+}
+
+public class MainInteractor {
+	// this is where the business logic is done, it has direct read/write access to the data in the model
+    private final MainModel mainModel;
+
+    public MainInteractor(MainModel mainModel) {
+        this.mainModel = mainModel;
+    }
+}
+
+// a couple other relvant classes
+public abstract class Controller<T extends Enum<T>> {
+
+    public abstract Region getView();
+
+    public abstract void action(T actionEnum);
+}
+
+public enum MainMessage {
+    NONE,
+    SEND_MESSAGE
+}
+
+// Lets begin by making a region that says "Drag and drop Global Spares Catalogue.xlsx here" in the view
+// When the correct file is dropped onto the region, put the full path into a StringProperty in the model
+// Then send a signal to the controller which in turn calls a method in the interactor to use org.apache.poi
+// FileInputStream fis = new FileInputStream(path located in model) which creates the following in the model XSSFWorkbook workbook = new XSSFWorkbook(fis))
+// a boolean property is then signaled on and off which activates a listener in the view to know that this has successfully occured
+// The region is then replaced with a status bar and a button that says "Rip into database"
+// that is enough for now.
