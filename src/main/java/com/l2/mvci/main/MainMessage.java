@@ -1,4 +1,4 @@
-package com.l2.main;
+package com.l2.mvci.main;
 
 public enum MainMessage {
     NONE,

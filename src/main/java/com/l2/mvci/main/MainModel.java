@@ -1,4 +1,4 @@
-package com.l2.main;
+package com.l2.mvci.main;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;

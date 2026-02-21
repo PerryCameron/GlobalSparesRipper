@@ -1,8 +1,12 @@
-package com.l2.main;
+package com.l2.mvci.main;
 
 
+import com.l2.Main;
 import com.l2.interfaces.Controller;
+import com.l2.mvci.load.LoadingController;
+import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 
 
 public class MainController extends Controller<MainMessage> {
@@ -10,6 +14,7 @@ public class MainController extends Controller<MainMessage> {
     private final MainModel model;
     private final MainInteractor interactor;
     private final MainView view;
+    private LoadingController loadingController;
 
     public MainController() {
         this.model = new MainModel();
@@ -42,5 +47,11 @@ public class MainController extends Controller<MainMessage> {
                 // no-op / future use
             }
         }
+    }
+
+    public void createLoadingController() {
+        loadingController = new LoadingController();
+        loadingController.getStage().setScene(new Scene(loadingController.getView(), Color.TRANSPARENT));
+        loadingController.getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
     }
 }
