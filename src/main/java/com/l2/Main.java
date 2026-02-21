@@ -1,6 +1,7 @@
 package com.l2;
 
 import com.l2.mvci.main.MainController;
+import com.l2.statictools.ImageResources;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -34,6 +35,7 @@ public class Main extends Application {
         primaryStage.setResizable(true);
         primaryStage.setScene(new Scene(controller.getView()));
         primaryStage.setTitle("Global Spares Ripper");
+        primaryStage.getIcons().add(ImageResources.GSLOGO16);
         primaryStage.show();
     }
 
