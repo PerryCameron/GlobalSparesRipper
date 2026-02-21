@@ -137,7 +137,7 @@ tasks.register<Exec>("packageApp") {
         "--dest",
         "build/jpackage",  // Output destination
         "--icon",
-        "src/main/resources/images/TSELogo.ico"  // Optional: Path to your app's icon
+        "src/main/resources/images/GSRipper.ico"  // Optional: Path to your app's icon
     )
 }
 
@@ -159,7 +159,7 @@ tasks.register<Exec>("packageApp") {
 //        "--runtime-image", "C:/Users/sesa91827/.jdks/jdk-21.0.10-full",
 //        "--dest", "build/jpackage/GlobalSparesRipperInstaller",
 //        "--install-dir", System.getenv("UserProfile") + "/TSENotes",  // Install in user's home directory
-//        "--icon", "src/main/resources/images/TSELogo.ico",  // Path to your ICO file for Windows
+//        "--icon", "src/main/resources/images/GSRipper.ico",  // Path to your ICO file for Windows
 //        "--win-menu",  // Adds an entry to the Start Menu
 //        "--win-shortcut",  // Creates a desktop shortcut
 //        "--win-console"  // Optional: Displays console output
