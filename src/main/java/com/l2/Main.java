@@ -8,6 +8,8 @@ import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 public class Main extends Application {
 
     public static Stage primaryStage;
@@ -21,10 +23,15 @@ public class Main extends Application {
     }
 
     @Override
+    public void init() {
+        AppFileTools.createFileIfNotExists(ApplicationPaths.globalSparesDir);
+        AppFileTools.createFileIfNotExists(ApplicationPaths.catalogueDir);
+        AppFileTools.createFileIfNotExists(ApplicationPaths.pastSqlDataBase);
+    }
+
+    @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
-
-
 
         controller = new MainController();
         logger.info("Main controller created");
@@ -35,7 +42,10 @@ public class Main extends Application {
         primaryStage.setResizable(true);
         primaryStage.setScene(new Scene(controller.getView()));
         primaryStage.setTitle("Global Spares Ripper");
-        primaryStage.getIcons().add(ImageResources.GSLOGO16);
+        primaryStage.getIcons().add(ImageResources.GSLOGO64);
+        primaryStage.getScene().getStylesheets().add(
+                getClass().getResource("/css/light.css").toExternalForm()
+        );
         primaryStage.show();
     }
 

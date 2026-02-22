@@ -1456,3 +1456,12 @@ Label.service-plan-details {
 .base-vbox {
     -fx-background-color: -fx-hover-bg;
 }
+
+.dropArea {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #adb5bd;
+    -fx-border-width: 3;
+    -fx-border-style: dashed;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}

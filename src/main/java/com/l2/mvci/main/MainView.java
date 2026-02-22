@@ -1,7 +1,9 @@
 package com.l2.mvci.main;
 
 
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -30,47 +32,57 @@ public class MainView implements Builder<Region> {
     @Override
     public Region build() {
         BorderPane root = new BorderPane();
-
-        // ── Drop zone ───────────────────────────────────────────────
-        Label dropLabel = new Label("Drag and drop Global Spares Catalogue.xlsx here");
-        dropLabel.setStyle("""
-            -fx-font-size: 18;
-            -fx-text-fill: #444;
-            -fx-padding: 60;
-            """);
-        dropLabel.setTextAlignment(TextAlignment.CENTER);
-        dropLabel.setAlignment(Pos.CENTER);
-
-        StackPane dropArea = new StackPane(dropLabel);
-        dropArea.setStyle("""
-            -fx-background-color: #f8f9fa;
-            -fx-border-color: #adb5bd;
-            -fx-border-width: 3;
-            -fx-border-style: dashed;
-            -fx-background-radius: 8;
-            -fx-border-radius: 8;
-            """);
-
-        // Drag & drop support
-        setupDragAndDrop(dropArea);
-
-        // ── Status / next step area ─────────────────────────────────
         VBox statusBox = createStatusArea();
-
-        // Switch between drop zone and status view
-        model.workbookReadyProperty().addListener((obs, wasReady, isReady) -> {
-            if (isReady) {
-                root.setCenter(statusBox);
-            } else {
-                root.setCenter(dropArea);
+        model.viewStatusProperty().addListener((obs, oldStatus, newStatus) -> {
+            System.out.println("ViewStatus changed: " + oldStatus + " -> " + newStatus);
+            root.setCenter(null);
+            switch (newStatus) {
+                case XFS_LOADED   -> {
+                    System.out.println("XFS_LOADED");
+                    root.setCenter(createStatusArea());
+                }
+                case LOADING_XFS -> {
+                    root.setCenter(createLoaxXFS());
+                }
+                default      -> {
+                    System.out.println("default");
+                    root.setCenter(dropArea()); }
             }
         });
 
         // initial state
-        root.setCenter(dropArea);
-
+        root.setCenter(dropArea());
         return root;
     }
+
+    private Node createLoaxXFS() {
+        VBox root = new VBox();
+        root.getChildren().add(new Label("Parsing Global Spares Catalogue.xlsx"));
+        return root;
+    }
+
+    private Node dropArea() {
+        VBox root = new VBox();
+        root.setPadding(new Insets(5));
+        model.labelProperty().set(new Label("Drag and drop Global Spares Catalogue.xlsx here"));
+        // ── Drop zone ───────────────────────────────────────────────
+        model.labelProperty().get().setStyle("""
+            -fx-font-size: 18;
+            -fx-text-fill: #444;
+            -fx-padding: 60;
+            """);
+        model.labelProperty().get().setTextAlignment(TextAlignment.CENTER);
+        model.labelProperty().get().setAlignment(Pos.CENTER);
+
+        StackPane dropArea = new StackPane(model.labelProperty().get());
+        dropArea.getStyleClass().add("dropArea");
+
+        // Drag & drop support
+        setupDragAndDrop(dropArea);
+        root.getChildren().add(dropArea);
+        return root;
+    }
+
 
     private void setupDragAndDrop(StackPane dropArea) {
         dropArea.setOnDragOver(event -> {
@@ -82,8 +94,11 @@ public class MainView implements Builder<Region> {
                     dropArea.setStyle(dropArea.getStyle()
                             .replace("#f8f9fa", "#e3f2fd")
                             .replace("#adb5bd", "#1976d2"));
+                    model.labelProperty().get().setVisible(false);
                 }
+
             }
+
             event.consume();
         });
 
@@ -119,9 +134,9 @@ public class MainView implements Builder<Region> {
         ProgressBar progress = new ProgressBar(0);
         progress.setVisible(false);
 
-        Button ripButton = new Button("Rip into database");
+        Button ripButton = new Button("Convert to SQL");
         ripButton.setStyle("-fx-font-size: 15; -fx-padding: 12 24;");
-        ripButton.setOnAction(e -> action.accept(MainMessage.LOAD_WORKBOOK_REQUEST));
+        ripButton.setOnAction(e -> action.accept(MainMessage.CONVERT_TO_SQL));
 
         VBox box = new VBox(20, statusLabel, ripButton);
         box.setAlignment(Pos.CENTER);

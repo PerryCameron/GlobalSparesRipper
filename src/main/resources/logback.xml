@@ -5,6 +5,12 @@
         </encoder>
     </appender>
 
+    <!-- POI packages -->
+    <logger name="org.apache.poi" level="INFO" />
+    <logger name="org.apache.poi.openxml4j" level="DEBUG" />
+    <logger name="org.apache.poi.poifs" level="DEBUG" />
+    <logger name="org.apache.xmlbeans" level="WARN" />
+
     <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
