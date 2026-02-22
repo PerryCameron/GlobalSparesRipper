@@ -3,14 +3,19 @@ package com.l2.mvci.main;
 import com.l2.mvci.load.LoadingController;
 import javafx.beans.property.*;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class MainModel {
     private final StringProperty droppedFilePath = new SimpleStringProperty("");
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
+    private final LongProperty totalWork = new SimpleLongProperty(0);
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
     private final LoadingController loadingController = new LoadingController();
+    private final ProgressBar progressBar = new ProgressBar(0);
+    private final TextArea ta = new TextArea();
 
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
 
@@ -64,5 +69,21 @@ public class MainModel {
 
     public LoadingController getLoadingController() {
         return loadingController;
+    }
+
+    public long getTotalWork() {
+        return totalWork.get();
+    }
+
+    public LongProperty totalWorkProperty() {
+        return totalWork;
+    }
+
+    public ProgressBar getProgressBar() {
+        return progressBar;
+    }
+
+    public TextArea getTa() {
+        return ta;
     }
 }

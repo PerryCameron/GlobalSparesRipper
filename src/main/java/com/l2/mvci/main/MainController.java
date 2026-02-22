@@ -4,6 +4,8 @@ package com.l2.mvci.main;
 import com.l2.interfaces.Controller;
 import javafx.scene.layout.Region;
 
+import static com.l2.mvci.main.ViewStatus.*;
+
 
 public class MainController extends Controller<MainMessage> {
 
@@ -27,13 +29,16 @@ public class MainController extends Controller<MainMessage> {
     public void action(MainMessage msg) {
         switch (msg) {
             case FILE_DROPPED_SUCCESS -> interactor.loadWorkbookFromDroppedFile(); // how can I send action back to do case LOAD_WORKBOOK_REQUEST from this method in interactor
-            case CONVERT_TO_SQL -> {
-                interactor.convertToSql();
-            }
+
             case LOAD_WORKBOOK_REQUEST -> {
 
             }
-
+            case PREP_CONV -> {
+                interactor.prepConvertToSql();
+            }
+            case CONVERT_TO_SQL -> {
+                interactor.convertToSql();
+            }
             case NONE, SEND_MESSAGE -> {
                 // no-op / future use
             }

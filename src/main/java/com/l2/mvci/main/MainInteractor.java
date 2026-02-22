@@ -1,7 +1,6 @@
 package com.l2.mvci.main;
 
 import com.l2.*;
-import com.l2.mvci.load.LoadingController;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
@@ -61,8 +60,8 @@ public class MainInteractor {
         thread.start();
     }
 
-    public void convertToSql() {
-        model.viewStatusProperty().setValue(ViewStatus.CONVERT_TO_SQL);
+    public void prepConvertToSql() {
+        model.viewStatusProperty().setValue(ViewStatus.PREP_TO_CONVERT);
         model.getLoadingController().setOffset(50, 0);
         model.getLoadingController().showLoadSpinner(true);
         Task<XSSFWorkbook> createDataBaseTask = new Task<>() {
@@ -72,39 +71,28 @@ public class MainInteractor {
                     logger.info("Existing Global Spares Catalogue found and moved for later comparison");
                 else logger.info("There is no existing Global Spares Catalogue found");
                 // if it was created then copy it to the old dir
-                // now create the sql
-                Long estimateNumber = ExcelRipper.estimateTotalWork(model.getWorkbook());
-                logger.info("Total Work Estimate: {}", estimateNumber);
+                GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
+                model.totalWorkProperty().set(ExcelRipper.estimateTotalWork(model.getWorkbook()));
+                logger.info("Total Work Estimate: {}", model.totalWorkProperty().get());
                 return null;
             }
         };
-        createDataBaseTask.setOnSucceeded(event -> {model.getLoadingController().showLoadSpinner(false);});
+        createDataBaseTask.setOnSucceeded(event -> {
+            model.getLoadingController().showLoadSpinner(false);
+            model.viewStatusProperty().setValue(ViewStatus.CONVERT_TO_SQL);
+        });
         createDataBaseTask.setOnFailed(event -> {model.getLoadingController().showLoadSpinner(false);});
         Thread thread = new Thread(createDataBaseTask);
         thread.start();
     }
 
-    public static boolean buildDatabase() {
-
-        // create a workbook of data
-        try (FileInputStream fis = new FileInputStream(ApplicationPaths.sourceExcel.toString());
-             XSSFWorkbook workbook = new XSSFWorkbook(fis)) {
-            // creates the database and puts it in database folder
-            GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
-
-
-            // extracts information from xlsx file and updates database with extracted information
-//            ExcelRipper.extractWorkbookToSql(workbook);
-//            // clean up unused database components
-//            ExcelRipper.cleanUpDatabase();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return true;
-    }
 
     public void setLoadingController() {
         model.getLoadingController().getStage().setScene(new Scene(model.getLoadingController().getView(), Color.TRANSPARENT));
         model.getLoadingController().getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
+    }
+
+    public void convertToSql() {
+        // begin database building process here
     }
 }

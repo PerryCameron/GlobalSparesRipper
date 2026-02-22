@@ -6,12 +6,10 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Builder;
 
@@ -39,10 +37,15 @@ public class MainView implements Builder<Region> {
                     root.setCenter(createStatusArea());
                 }
                 case LOADING_XFS -> {
-                    root.setCenter(createLoadXFS("Parsing Global Spares Catalogue.xlsx"));
+                    root.setCenter(createLabledProcess("Parsing Global Spares Catalogue.xlsx"));
+                }
+                case PREP_TO_CONVERT -> {
+                    root.setCenter(createLabledProcess("Calculating Conversion time"));
+                    // action.accept(MainMessage.CONVERT_TO_SQL);
                 }
                 case CONVERT_TO_SQL -> {
-                    root.setCenter(createLoadXFS("Converting to SQL..."));
+                    root.setCenter(createConvertScreen());
+                    action.accept(MainMessage.CONVERT_TO_SQL);
                 }
                 default      -> {
                     root.setCenter(dropArea()); }
@@ -53,7 +56,29 @@ public class MainView implements Builder<Region> {
         return root;
     }
 
-    private Node createLoadXFS(String labelText) {
+
+    private Node createConvertScreen() {
+        VBox root = new VBox(8);
+        root.setPadding(new Insets(50, 20, 10, 20));
+        root.setFillWidth(true);
+
+        ProgressBar pb = model.getProgressBar();
+        TextArea ta = model.getTa();
+        ta.setEditable(false);
+        pb.setPrefHeight(40);   // make it taller
+        pb.setMinHeight(40);
+        pb.setMaxHeight(40);
+        pb.setMaxWidth(Double.MAX_VALUE);    // the bar is all the way up against the left
+
+        root.getChildren().add(pb);
+        root.getChildren().add(ta);
+        // VBox.setVgrow(pb, Priority.NEVER);
+
+        return root;
+    }
+
+
+    private Node createLabledProcess(String labelText) {
         VBox root = new VBox();
         root.setAlignment(Pos.TOP_CENTER);
         Label label = new Label(labelText);
@@ -134,12 +159,9 @@ public class MainView implements Builder<Region> {
         Label statusLabel = new Label("Catalogue loaded successfully");
         statusLabel.setStyle("-fx-font-size: 16; -fx-text-fill: #2e7d32;");
 
-        ProgressBar progress = new ProgressBar(0);
-        progress.setVisible(false);
-
         Button ripButton = new Button("Convert to SQL");
         ripButton.setStyle("-fx-font-size: 15; -fx-padding: 12 24;");
-        ripButton.setOnAction(e -> action.accept(MainMessage.CONVERT_TO_SQL));
+        ripButton.setOnAction(e -> action.accept(MainMessage.PREP_CONV));
 
         VBox box = new VBox(20, statusLabel, ripButton);
         box.setAlignment(Pos.CENTER);
