@@ -1,11 +1,10 @@
 package com.l2.mvci.main;
 
-import com.l2.AppFileTools;
-import com.l2.ApplicationPaths;
-import com.l2.ExcelRipper;
-import com.l2.GlobalSparesSQLiteDatabaseCreator;
+import com.l2.*;
 import com.l2.mvci.load.LoadingController;
 import javafx.concurrent.Task;
+import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,15 +21,15 @@ public class MainInteractor {
         this.model = model;
     }
 
-    public void loadWorkbookFromDroppedFile(LoadingController loadingController) {
+    public void loadWorkbookFromDroppedFile() {
         String path = model.getDroppedFilePath();
         if (path == null || path.isBlank()) {
             System.err.println("No file path in model");
             return;
         }
         model.viewStatusProperty().setValue(ViewStatus.LOADING_XFS);
-        loadingController.setOffset(50, 0);
-        loadingController.showLoadSpinner(true);
+        model.getLoadingController().setOffset(50, 0);
+        model.getLoadingController().showLoadSpinner(true);
         Task<XSSFWorkbook> contactListTask = new Task<>() {
             @Override
             protected XSSFWorkbook call() {
@@ -51,18 +50,21 @@ public class MainInteractor {
             if (workbook != null) {
                 model.setWorkbook(workbook);
                 model.viewStatusProperty().setValue(ViewStatus.XFS_LOADED);
-                loadingController.showLoadSpinner(false);
+                model.getLoadingController().showLoadSpinner(false);
             }
         });
         contactListTask.setOnFailed(event -> {
             model.setWorkbookReady(false);
-            loadingController.showLoadSpinner(false);
+            model.getLoadingController().showLoadSpinner(false);
         });
         Thread thread = new Thread(contactListTask);
         thread.start();
     }
 
     public void convertToSql() {
+        model.viewStatusProperty().setValue(ViewStatus.CONVERT_TO_SQL);
+        model.getLoadingController().setOffset(50, 0);
+        model.getLoadingController().showLoadSpinner(true);
         Task<XSSFWorkbook> createDataBaseTask = new Task<>() {
             @Override
             protected XSSFWorkbook call() {
@@ -76,6 +78,8 @@ public class MainInteractor {
                 return null;
             }
         };
+        createDataBaseTask.setOnSucceeded(event -> {model.getLoadingController().showLoadSpinner(false);});
+        createDataBaseTask.setOnFailed(event -> {model.getLoadingController().showLoadSpinner(false);});
         Thread thread = new Thread(createDataBaseTask);
         thread.start();
     }
@@ -97,5 +101,10 @@ public class MainInteractor {
             e.printStackTrace();
         }
         return true;
+    }
+
+    public void setLoadingController() {
+        model.getLoadingController().getStage().setScene(new Scene(model.getLoadingController().getView(), Color.TRANSPARENT));
+        model.getLoadingController().getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
     }
 }

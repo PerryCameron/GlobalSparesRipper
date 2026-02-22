@@ -1,5 +1,6 @@
 package com.l2.mvci.main;
 
+import com.l2.mvci.load.LoadingController;
 import javafx.beans.property.*;
 import javafx.scene.control.Label;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -9,6 +10,7 @@ public class MainModel {
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
+    private final LoadingController loadingController = new LoadingController();
 
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
 
@@ -58,5 +60,9 @@ public class MainModel {
 
     public ObjectProperty<ViewStatus> viewStatusProperty() {
         return viewStatus;
+    }
+
+    public LoadingController getLoadingController() {
+        return loadingController;
     }
 }

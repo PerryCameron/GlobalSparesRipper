@@ -1,6 +1,5 @@
 package com.l2.mvci.main;
 
-
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -32,32 +31,38 @@ public class MainView implements Builder<Region> {
     @Override
     public Region build() {
         BorderPane root = new BorderPane();
-        VBox statusBox = createStatusArea();
         model.viewStatusProperty().addListener((obs, oldStatus, newStatus) -> {
             System.out.println("ViewStatus changed: " + oldStatus + " -> " + newStatus);
             root.setCenter(null);
             switch (newStatus) {
                 case XFS_LOADED   -> {
-                    System.out.println("XFS_LOADED");
                     root.setCenter(createStatusArea());
                 }
                 case LOADING_XFS -> {
-                    root.setCenter(createLoaxXFS());
+                    root.setCenter(createLoadXFS("Parsing Global Spares Catalogue.xlsx"));
+                }
+                case CONVERT_TO_SQL -> {
+                    root.setCenter(createLoadXFS("Converting to SQL..."));
                 }
                 default      -> {
-                    System.out.println("default");
                     root.setCenter(dropArea()); }
             }
         });
-
         // initial state
         root.setCenter(dropArea());
         return root;
     }
 
-    private Node createLoaxXFS() {
+    private Node createLoadXFS(String labelText) {
         VBox root = new VBox();
-        root.getChildren().add(new Label("Parsing Global Spares Catalogue.xlsx"));
+        root.setAlignment(Pos.TOP_CENTER);
+        Label label = new Label(labelText);
+        label.setStyle("""
+            -fx-font-size: 18;
+            -fx-text-fill: #444;
+            -fx-padding: 60;
+            """);
+        root.getChildren().add(label);
         return root;
     }
 
@@ -83,7 +88,6 @@ public class MainView implements Builder<Region> {
         return root;
     }
 
-
     private void setupDragAndDrop(StackPane dropArea) {
         dropArea.setOnDragOver(event -> {
             if (event.getGestureSource() != dropArea &&
@@ -98,7 +102,6 @@ public class MainView implements Builder<Region> {
                 }
 
             }
-
             event.consume();
         });
 
