@@ -28,32 +28,33 @@ public class MainView implements Builder<Region> {
 
     @Override
     public Region build() {
-        BorderPane root = new BorderPane();
+        model.rootProperty().set(new BorderPane());
         model.viewStatusProperty().addListener((obs, oldStatus, newStatus) -> {
-            System.out.println("ViewStatus changed: " + oldStatus + " -> " + newStatus);
-            root.setCenter(null);
+            model.rootProperty().get().setCenter(null);
             switch (newStatus) {
                 case XFS_LOADED   -> {
-                    root.setCenter(createStatusArea());
+                    model.rootProperty().get().setCenter(createStatusArea());
                 }
                 case LOADING_XFS -> {
-                    root.setCenter(createLabledProcess("Parsing Global Spares Catalogue.xlsx"));
+                    model.rootProperty().get().setCenter(createLabledProcess("Parsing Global Spares Catalogue.xlsx"));
                 }
                 case PREP_TO_CONVERT -> {
-                    root.setCenter(createLabledProcess("Calculating Conversion time"));
-                    // action.accept(MainMessage.CONVERT_TO_SQL);
+                    model.rootProperty().get().setCenter(createLabledProcess("Calculating Conversion time"));
                 }
                 case CONVERT_TO_SQL -> {
-                    root.setCenter(createConvertScreen());
+                    model.rootProperty().get().setCenter(createConvertScreen());
                     action.accept(MainMessage.CONVERT_TO_SQL);
                 }
+                case ERROR -> {
+                    model.rootProperty().get().setCenter(createErrorMessage());
+                }
                 default      -> {
-                    root.setCenter(dropArea()); }
+                    model.rootProperty().get().setCenter(dropArea()); }
             }
         });
         // initial state
-        root.setCenter(dropArea());
-        return root;
+        model.rootProperty().get().setCenter(dropArea());
+        return model.rootProperty().get();
     }
 
 
@@ -75,6 +76,29 @@ public class MainView implements Builder<Region> {
         // VBox.setVgrow(pb, Priority.NEVER);
 
         return root;
+    }
+
+    private Node createErrorMessage() {
+        VBox vBox = new VBox();
+        vBox.setAlignment(Pos.TOP_CENTER);
+        Label errorLabel = new Label(model.getErrorMessage());
+        Button okButton = new Button("OK");
+        errorLabel.setStyle("""
+            -fx-font-size: 18;
+            -fx-text-fill: #020202;
+            -fx-padding: 60;
+            """);
+        Label label = new Label("Error Occurred");
+        label.setStyle("""
+            -fx-font-size: 28;
+            -fx-text-fill: #f40606;
+            -fx-padding: 60;
+            """);
+        okButton.setOnAction(e -> {
+            model.rootProperty().get().setCenter(dropArea());
+        });
+        vBox.getChildren().addAll(label, errorLabel, okButton);
+        return vBox;
     }
 
 

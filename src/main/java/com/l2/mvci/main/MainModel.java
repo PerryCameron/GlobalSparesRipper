@@ -5,18 +5,20 @@ import javafx.beans.property.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class MainModel {
     private final StringProperty droppedFilePath = new SimpleStringProperty("");
+    private final StringProperty errorMessage = new SimpleStringProperty("");
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
-    private final int[] totalWork = new int[] { 0,0,0,0 };
+    private final int[] totalWork = new int[] { 0,0,0,0,0,0 };
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
+    private final ObjectProperty<BorderPane> root = new SimpleObjectProperty<>();
     private final LoadingController loadingController = new LoadingController();
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
-
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
 
     public String getDroppedFilePath() {
@@ -29,6 +31,14 @@ public class MainModel {
 
     public StringProperty droppedFilePathProperty() {
         return droppedFilePath;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage.get();
+    }
+
+    public void setErrorMessage(String message) {
+        errorMessage.set(message);
     }
 
     public boolean isWorkbookReady() {
@@ -74,6 +84,7 @@ public class MainModel {
     public int getProductToSparesTotal() {
         return totalWork[0];
     }
+
     public int getArchivedProductToSparesTotal() {
         return totalWork[1];
     }
@@ -81,8 +92,25 @@ public class MainModel {
     public int getReplacementCRs() {
         return totalWork[2];
     }
+
     public int getUniflairCrossReference() {
         return totalWork[3];
+    }
+
+    public int getConsolidatedProductToSpares() {
+        return totalWork[4];
+    }
+
+    public int getConsolidatedArchivedProductToSpares() {
+        return totalWork[5];
+    }
+
+    public void setConsolidatedProductToSpares(int work) {
+        totalWork[4] = work;
+    }
+
+    public void setConsolidatedArchivedProductToSpares(int work) {
+        totalWork[5] = work;
     }
 
     public void setTotalWork(int[] work) {
@@ -103,5 +131,13 @@ public class MainModel {
 
     public TextArea getTa() {
         return ta;
+    }
+
+    public BorderPane getRoot() {
+        return root.get();
+    }
+
+    public ObjectProperty<BorderPane> rootProperty() {
+        return root;
     }
 }

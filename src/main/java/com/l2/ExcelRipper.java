@@ -20,46 +20,46 @@ public class ExcelRipper {
     private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
     private static List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
-//    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
-//        Sheet sheet = workbook.getSheet("Product to Spares");
-//        if (sheet == null) {
-//            System.out.println("Sheet 'Product to Spares' not found.");
-//            return false;
-//        }
-//        // extracts metadata from workbook
-//        logger.info("Saving Meta data properties");
-//        extractWorkbookProperties(workbook, globalSparesRepository);
-//
-//        // here is where we fill the product to spares table with items in the catelogue
-//        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
-//        logger.info("Ripping Product to Spares");  // succeeds
-//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
-//
-//        // here is where we fill the product to spares table with items that are archived
-//        productToSpares.setArchived(true);
-//        sheet = workbook.getSheet("Archived Product to Spares");
-//        logger.info("Ripping Archived Product to Spares");  // succeeds
-//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
-//        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
-//
-//        // here is where we fill our replament_cr table with 3-phase
-//        sheet = workbook.getSheet("Replacement CRs");
-//        logger.info("Ripping Replacement CRs (3-ph)");
-//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-//
-//        // here is where we fill our replacement_cr with uniflair
-//        sheet = workbook.getSheet("Uniflair Cross Reference");
-//        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
-//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-//
-//        logger.info("Consolidating Product to Spares ");  // this fails
-//        consolidateWithJSON(false, globalSparesRepository);
-//
-//        logger.info("Consolidating Archived Product to Spares");
-//        consolidateWithJSON(true, globalSparesRepository);
-//
-//        return true;
-//    }
+    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
+        Sheet sheet = workbook.getSheet("Product to Spares");
+        if (sheet == null) {
+            System.out.println("Sheet 'Product to Spares' not found.");
+            return false;
+        }
+        // extracts metadata from workbook
+        logger.info("Saving Meta data properties");
+        extractWorkbookProperties(workbook, globalSparesRepository);
+
+        // here is where we fill the product to spares table with items in the catelogue
+        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
+        logger.info("Ripping Product to Spares");  // succeeds
+        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
+
+        // here is where we fill the product to spares table with items that are archived
+        productToSpares.setArchived(true);
+        sheet = workbook.getSheet("Archived Product to Spares");
+        logger.info("Ripping Archived Product to Spares");  // succeeds
+        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
+
+        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
+        // here is where we fill our replament_cr table with 3-phase
+        sheet = workbook.getSheet("Replacement CRs");
+        logger.info("Ripping Replacement CRs (3-ph)");
+        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+
+        // here is where we fill our replacement_cr with uniflair
+        sheet = workbook.getSheet("Uniflair Cross Reference");
+        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
+        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+
+        logger.info("Consolidating Product to Spares ");  // this fails
+        consolidateWithJSON(false, globalSparesRepository);
+
+        logger.info("Consolidating Archived Product to Spares");
+        consolidateWithJSON(true, globalSparesRepository);
+
+        return true;
+    }
 
     public static void consolidateWithJSON(boolean isArchived, GlobalSparesRepository globalSparesRepository) {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -276,26 +276,22 @@ public class ExcelRipper {
     }
 
     public static int[] estimateTotalWork(XSSFWorkbook workbook) {
-        int[] totals = new int[4]; // {Product to Spares, Archived, Replacement CRs, Uniflair}
-
+        int[] totals = new int[6]; // {Product to Spares, Archived, Replacement CRs, Uniflair}
         // 0 = Product to Spares
         totals[0] = countNonEmptyDataRows(workbook.getSheet("Product to Spares"), 3, 2);
-
         // 1 = Archived Product to Spares
         totals[1] = countNonEmptyDataRows(workbook.getSheet("Archived Product to Spares"), 3, 2);
-
         // 2 = Replacement CRs
         totals[2] = countNonEmptyDataRows(workbook.getSheet("Replacement CRs"), 3, 2);
-
-        // 3 = Uniflair Cross Reference
+        // 3 = Uniflair Cross-Reference
         totals[3] = countNonEmptyDataRows(workbook.getSheet("Uniflair Cross Reference"), 3, 2);
-
+        totals[4] = 0;
+        totals[5] = 0;
         // If literally nothing was found → return minimal non-zero value to prevent ÷0
         boolean completelyEmpty = totals[0] == 0 && totals[1] == 0 && totals[2] == 0 && totals[3] == 0;
         if (completelyEmpty) {
-            return new int[]{1, 0, 0, 0}; // or {1,1,1,1} depending on downstream logic
+            return new int[]{1, 0, 0, 0, 0, 0}; // or {1,1,1,1} depending on downstream logic
         }
-
         return totals;
     }
 
