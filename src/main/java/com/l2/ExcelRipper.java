@@ -20,48 +20,48 @@ public class ExcelRipper {
     private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
     private static List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
-    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
-        Sheet sheet = workbook.getSheet("Product to Spares");
-        if (sheet == null) {
-            System.out.println("Sheet 'Product to Spares' not found.");
-            return false;
-        }
-        // extracts metadata from workbook
-        logger.info("Saving Meta data properties");
-        extractWorkbookProperties(workbook, globalSparesRepository);
+//    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
+//        Sheet sheet = workbook.getSheet("Product to Spares");
+//        if (sheet == null) {
+//            System.out.println("Sheet 'Product to Spares' not found.");
+//            return false;
+//        }
+//        // extracts metadata from workbook
+//        logger.info("Saving Meta data properties");
+//        extractWorkbookProperties(workbook, globalSparesRepository);
+//
+//        // here is where we fill the product to spares table with items in the catelogue
+//        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
+//        logger.info("Ripping Product to Spares");  // succeeds
+//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
+//
+//        // here is where we fill the product to spares table with items that are archived
+//        productToSpares.setArchived(true);
+//        sheet = workbook.getSheet("Archived Product to Spares");
+//        logger.info("Ripping Archived Product to Spares");  // succeeds
+//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
+//        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
+//
+//        // here is where we fill our replament_cr table with 3-phase
+//        sheet = workbook.getSheet("Replacement CRs");
+//        logger.info("Ripping Replacement CRs (3-ph)");
+//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+//
+//        // here is where we fill our replacement_cr with uniflair
+//        sheet = workbook.getSheet("Uniflair Cross Reference");
+//        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
+//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+//
+//        logger.info("Consolidating Product to Spares ");  // this fails
+//        consolidateWithJSON(false, globalSparesRepository);
+//
+//        logger.info("Consolidating Archived Product to Spares");
+//        consolidateWithJSON(true, globalSparesRepository);
+//
+//        return true;
+//    }
 
-        // here is where we fill the product to spares table with items in the catelogue
-        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
-        logger.info("Ripping Product to Spares");  // succeeds
-        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
-
-        // here is where we fill the product to spares table with items that are archived
-        productToSpares.setArchived(true);
-        sheet = workbook.getSheet("Archived Product to Spares");
-        logger.info("Ripping Archived Product to Spares");  // succeeds
-        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
-        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
-
-        // here is where we fill our replament_cr table with 3-phase
-        sheet = workbook.getSheet("Replacement CRs");
-        logger.info("Ripping Replacement CRs (3-ph)");
-        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-
-        // here is where we fill our replacement_cr with uniflair
-        sheet = workbook.getSheet("Uniflair Cross Reference");
-        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
-        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-
-        logger.info("Consolidating Product to Spares ");  // this fails
-        consolidateWithJSON(false, globalSparesRepository);
-
-        logger.info("Consolidating Archived Product to Spares");
-        consolidateWithJSON(true, globalSparesRepository);
-
-        return true;
-    }
-
-    private static void consolidateWithJSON(boolean isArchived, GlobalSparesRepository globalSparesRepository) {
+    public static void consolidateWithJSON(boolean isArchived, GlobalSparesRepository globalSparesRepository) {
         ObjectMapper objectMapper = new ObjectMapper();
 
         // get a list of just the spares (part numbers) as strings distinct with no duplicates from product_to_spares
@@ -136,7 +136,7 @@ public class ExcelRipper {
         }
     }
 
-    private static void extractReplacementCr(
+    public static void extractReplacementCr(
             Sheet sheet,
             ReplacementCrDTO replacementCrDTO,
             GlobalSparesRepository globalSparesRepository) {
@@ -206,7 +206,7 @@ public class ExcelRipper {
         }
     }
 
-    private static void extractProductToSpares(
+    public static void extractProductToSpares(
             Sheet sheet,
             ProductToSparesDTO productToSpares,
             GlobalSparesRepository globalSparesRepository,
@@ -275,49 +275,78 @@ public class ExcelRipper {
         }
     }
 
-    public static long estimateTotalWork(XSSFWorkbook workbook) {
-        long total = 0;
+    public static int[] estimateTotalWork(XSSFWorkbook workbook) {
+        int[] totals = new int[4]; // {Product to Spares, Archived, Replacement CRs, Uniflair}
 
-        // Product to Spares
-        total += countProcessRows(workbook.getSheet("Product to Spares"), 3);
+        // 0 = Product to Spares
+        totals[0] = countNonEmptyDataRows(workbook.getSheet("Product to Spares"), 3, 2);
 
-        // Archived Product to Spares
-        total += countProcessRows(workbook.getSheet("Archived Product to Spares"), 3);
+        // 1 = Archived Product to Spares
+        totals[1] = countNonEmptyDataRows(workbook.getSheet("Archived Product to Spares"), 3, 2);
 
-        // Replacement CRs
-        total += countProcessRows(workbook.getSheet("Replacement CRs"), 3);
+        // 2 = Replacement CRs
+        totals[2] = countNonEmptyDataRows(workbook.getSheet("Replacement CRs"), 3, 2);
 
-        // Uniflair Cross Reference
-        total += countProcessRows(workbook.getSheet("Uniflair Cross Reference"), 3);
+        // 3 = Uniflair Cross Reference
+        totals[3] = countNonEmptyDataRows(workbook.getSheet("Uniflair Cross Reference"), 3, 2);
 
-        // You can add a small fixed "cost" for consolidation if you want
-        // total += 100;  // arbitrary weight for JSON consolidation steps
+        // If literally nothing was found → return minimal non-zero value to prevent ÷0
+        boolean completelyEmpty = totals[0] == 0 && totals[1] == 0 && totals[2] == 0 && totals[3] == 0;
+        if (completelyEmpty) {
+            return new int[]{1, 0, 0, 0}; // or {1,1,1,1} depending on downstream logic
+        }
 
-        return total > 0 ? total : 1; // avoid division by zero
+        return totals;
     }
 
-    private static long countProcessRows(Sheet sheet, int skipFirstNRows) {
-        if (sheet == null) return 0;
+    /**
+     * Counts rows that look like real data records.
+     *
+     * @param sheet        the sheet (may be null)
+     * @param skipFirstN   number of header/title rows to skip
+     * @param keyColumnIdx 0-based column index that must be non-blank to count the row
+     * @return number of data-like rows
+     */
+    private static int countNonEmptyDataRows(Sheet sheet, int skipFirstN, int keyColumnIdx) {
+        if (sheet == null) {
+            return 0;
+        }
 
-        int firstDataRow = Math.max(skipFirstNRows, sheet.getFirstRowNum());
-        int lastRowNum = sheet.getLastRowNum();
+        int count = 0;
+        int firstPossibleDataRow = Math.max(skipFirstN, sheet.getFirstRowNum());
 
-        long count = 0;
+        // Use getPhysicalNumberOfRows() as a fast upper bound when possible
+        int maxRowToCheck = Math.min(
+                sheet.getLastRowNum(),
+                sheet.getPhysicalNumberOfRows() + 50  // small safety margin
+        );
 
-        // We can do a quick scan — usually fast even on large sheets
-        for (int r = firstDataRow; r <= lastRowNum; r++) {
+        DataFormatter formatter = new DataFormatter();
+
+        for (int r = firstPossibleDataRow; r <= maxRowToCheck; r++) {
             Row row = sheet.getRow(r);
-            if (row == null) continue;
+            if (row == null) {
+                continue;
+            }
 
-            // Optional: consider row "real" only if it has data in key column (e.g. spare item)
-            Cell keyCell = row.getCell(2, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK); // col 2 = spare_item
-            String value = new DataFormatter().formatCellValue(keyCell).trim();
+            // Skip clearly empty rows early
+            if (row.getLastCellNum() <= keyColumnIdx) {
+                continue;
+            }
+
+            Cell keyCell = row.getCell(keyColumnIdx, Row.MissingCellPolicy.RETURN_NULL_AND_BLANK);
+            if (keyCell == null) {
+                continue;
+            }
+
+            String value = formatter.formatCellValue(keyCell).trim();
             if (!value.isEmpty()) {
                 count++;
+                // Optional early exit heuristic if you know max realistic rows
+                // if (count > 150_000) break;
             }
         }
 
         return count;
     }
-
 }

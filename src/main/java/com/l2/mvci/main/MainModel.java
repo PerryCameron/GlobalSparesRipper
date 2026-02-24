@@ -10,7 +10,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class MainModel {
     private final StringProperty droppedFilePath = new SimpleStringProperty("");
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
-    private final LongProperty totalWork = new SimpleLongProperty(0);
+    private final int[] totalWork = new int[] { 0,0,0,0 };
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
     private final LoadingController loadingController = new LoadingController();
@@ -71,12 +71,30 @@ public class MainModel {
         return loadingController;
     }
 
-    public long getTotalWork() {
-        return totalWork.get();
+    public int getProductToSparesTotal() {
+        return totalWork[0];
+    }
+    public int getArchivedProductToSparesTotal() {
+        return totalWork[1];
     }
 
-    public LongProperty totalWorkProperty() {
-        return totalWork;
+    public int getReplacementCRs() {
+        return totalWork[2];
+    }
+    public int getUniflairCrossReference() {
+        return totalWork[3];
+    }
+
+    public void setTotalWork(int[] work) {
+        System.arraycopy(work, 0, totalWork, 0, totalWork.length);
+    }
+
+    public String totalWorkToString() {
+        return
+                "Product to Spares total: " +totalWork[0] +
+                " Archived Product to Spares total: " +totalWork[1] +
+                " Replacement Cr's: " +totalWork[2] +
+                " Uniflair Cross Reference: " +totalWork[3];
     }
 
     public ProgressBar getProgressBar() {
