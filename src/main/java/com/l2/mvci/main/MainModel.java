@@ -2,6 +2,7 @@ package com.l2.mvci.main;
 
 import com.l2.mvci.load.LoadingController;
 import javafx.beans.property.*;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
@@ -16,6 +17,7 @@ public class MainModel {
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
     private final ObjectProperty<BorderPane> root = new SimpleObjectProperty<>();
+    private final ObjectProperty<Button> button = new SimpleObjectProperty<>(new Button("Close"));
     private final LoadingController loadingController = new LoadingController();
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
@@ -139,5 +141,13 @@ public class MainModel {
 
     public ObjectProperty<BorderPane> rootProperty() {
         return root;
+    }
+
+    public Button getButton() {
+        return button.get();
+    }
+
+    public ObjectProperty<Button> buttonProperty() {
+        return button;
     }
 }

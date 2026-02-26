@@ -48,6 +48,9 @@ public class MainView implements Builder<Region> {
                 case ERROR -> {
                     model.rootProperty().get().setCenter(createErrorMessage());
                 }
+                case CONVERSION_DONE -> {
+                    model.buttonProperty().get().setVisible(true);
+                }
                 default      -> {
                     model.rootProperty().get().setCenter(dropArea()); }
             }
@@ -62,7 +65,10 @@ public class MainView implements Builder<Region> {
         VBox root = new VBox(8);
         root.setPadding(new Insets(50, 20, 10, 20));
         root.setFillWidth(true);
-
+        model.buttonProperty().get().setVisible(false);
+        model.buttonProperty().get().setOnMouseClicked(event -> {
+            System.exit(0);
+        });
         ProgressBar pb = model.getProgressBar();
         TextArea ta = model.getTa();
         ta.setEditable(false);
@@ -73,6 +79,7 @@ public class MainView implements Builder<Region> {
 
         root.getChildren().add(pb);
         root.getChildren().add(ta);
+        root.getChildren().add(model.buttonProperty().get());
         // VBox.setVgrow(pb, Priority.NEVER);
 
         return root;

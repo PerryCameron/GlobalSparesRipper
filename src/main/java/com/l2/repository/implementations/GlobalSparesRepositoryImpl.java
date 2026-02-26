@@ -14,11 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -298,8 +300,7 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         try {
             String sql = "SELECT id, range, range_additional, range_type, last_update, last_updated_by FROM ranges";
             return jdbcTemplate.query(sql, new RangesRowMapper());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error(e.getMessage());
         }
         return List.of();
@@ -323,9 +324,9 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
      *
      * @param keywords An array of keywords to search for in the spares database. Must not be null or empty.
      * @return A list of {@link SparesDTO} objects representing matching spares records, sorted by match score
-     *         in descending order. Returns an empty list if no matches are found.
+     * in descending order. Returns an empty list if no matches are found.
      * @throws org.springframework.jdbc.BadSqlGrammarException If the generated SQL query is invalid.
-     * @throws // org.springframework.jdbc.JdbcSQLException If a database access error occurs.
+     * @throws / /                                              org.springframework.jdbc.JdbcSQLException If a database access error occurs.
      */
     @Override
     public List<SparesDTO> searchSparesScoring(String[] keywords) {
@@ -337,32 +338,32 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
                 whereBuilder.append(" OR ");
             }
             scoreBuilder.append("""
-            (CASE WHEN spare_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
-            (CASE WHEN replacement_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
-            (CASE WHEN standard_exchange_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
-            (CASE WHEN spare_description LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
-            (CASE WHEN comments LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
-            (CASE WHEN keywords LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END)
-        """);
+                        (CASE WHEN spare_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
+                        (CASE WHEN replacement_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
+                        (CASE WHEN standard_exchange_item LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
+                        (CASE WHEN spare_description LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
+                        (CASE WHEN comments LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END) +
+                        (CASE WHEN keywords LIKE '%' || ? || '%' COLLATE NOCASE THEN 1 ELSE 0 END)
+                    """);
             // Remove trailing '+' from scoreBuilder if it's the last keyword
             if (k < keywords.length - 1) {
                 scoreBuilder.append(" + ");
             }
             whereBuilder.append("""
-            spare_item LIKE '%' || ? || '%' COLLATE NOCASE
-            OR replacement_item LIKE '%' || ? || '%' COLLATE NOCASE
-            OR standard_exchange_item LIKE '%' || ? || '%' COLLATE NOCASE
-            OR spare_description LIKE '%' || ? || '%' COLLATE NOCASE
-            OR comments LIKE '%' || ? || '%' COLLATE NOCASE
-            OR keywords LIKE '%' || ? || '%' COLLATE NOCASE
-        """);
+                        spare_item LIKE '%' || ? || '%' COLLATE NOCASE
+                        OR replacement_item LIKE '%' || ? || '%' COLLATE NOCASE
+                        OR standard_exchange_item LIKE '%' || ? || '%' COLLATE NOCASE
+                        OR spare_description LIKE '%' || ? || '%' COLLATE NOCASE
+                        OR comments LIKE '%' || ? || '%' COLLATE NOCASE
+                        OR keywords LIKE '%' || ? || '%' COLLATE NOCASE
+                    """);
         }
         String sql = String.format("""
-        SELECT *, (%s) AS match_score
-        FROM spares
-        WHERE %s
-        ORDER BY match_score DESC
-    """, scoreBuilder.toString().replaceAll("\\+\\s*$", ""), whereBuilder);
+                    SELECT *, (%s) AS match_score
+                    FROM spares
+                    WHERE %s
+                    ORDER BY match_score DESC
+                """, scoreBuilder.toString().replaceAll("\\+\\s*$", ""), whereBuilder);
         List<Object> params = new ArrayList<>();
         for (String keyword : keywords) {
             String normalizedKeyword = NoteTools.normalizeDate(keyword);
@@ -386,14 +387,14 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     /**
      * Searches the spares database for rows matching at least one range and one keyword.
      * - Ranges are matched against the 'pim' column using case-insensitive substring search
-     *   (e.g., pim LIKE '%Galaxy VX%'). The pim column contains JSON data with 'range' and 'product_families' fields.
+     * (e.g., pim LIKE '%Galaxy VX%'). The pim column contains JSON data with 'range' and 'product_families' fields.
      * - Keywords are matched against fields (spare_item, replacement_item, standard_exchange_item, spare_description, comments, keywords)
-     *   using case-insensitive substring search (e.g., spare_item LIKE '%0J-0360%').
+     * using case-insensitive substring search (e.g., spare_item LIKE '%0J-0360%').
      * - A match_score is calculated based on the number of keyword matches across the fields (1 point per match per field per keyword).
      * - Results are ordered by match_score in descending order, returning all matching rows without a limit.
      * - Debug logs include range match counts, combined range and keyword match counts, and sample matching rows with pim values.
      *
-     * @param ranges Array of range strings to match against the pim column (e.g., ["Galaxy VX", "GVX"]). Leading/trailing spaces are trimmed.
+     * @param ranges   Array of range strings to match against the pim column (e.g., ["Galaxy VX", "GVX"]). Leading/trailing spaces are trimmed.
      * @param keywords Array of keyword strings to match against the specified fields (e.g., ["0J-0360"]).
      * @return List of SparesDTO objects representing matching rows, sorted by match_score DESC.
      */
@@ -458,12 +459,12 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             try {
                 jdbcTemplate.query(debugRowsSql, (rs, rowNum) -> {
                     System.out.println("Debug row - pim: " + rs.getString("pim") +
-                                       ", spare_description: " + rs.getString("spare_description") +
-                                       ", spare_item: " + rs.getString("spare_item") +
-                                       ", replacement_item: " + rs.getString("replacement_item") +
-                                       ", standard_exchange_item: " + rs.getString("standard_exchange_item") +
-                                       ", comments: " + rs.getString("comments") +
-                                       ", keywords: " + rs.getString("keywords"));
+                            ", spare_description: " + rs.getString("spare_description") +
+                            ", spare_item: " + rs.getString("spare_item") +
+                            ", replacement_item: " + rs.getString("replacement_item") +
+                            ", standard_exchange_item: " + rs.getString("standard_exchange_item") +
+                            ", comments: " + rs.getString("comments") +
+                            ", keywords: " + rs.getString("keywords"));
                     return null;
                 });
             } catch (Exception e) {
@@ -524,21 +525,21 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
      * SQL injection.
      * </p>
      *
-     * @param searchTerm The search term to match against {@code spare_item} or {@code replacement_item}. Must not be null.
+     * @param searchTerm  The search term to match against {@code spare_item} or {@code replacement_item}. Must not be null.
      * @param partOrderId The ID of the part order, currently unused but reserved for future functionality.
      * @return A list of {@link SparesDTO} objects representing matching spares records, grouped by {@code spare_item}.
-     *         Returns an empty list if no matches are found or if a database error occurs.
-     * @throws // org.springframework.jdbc.JdbcSQLException If a database access error occurs (logged and handled by returning an empty list).
+     * Returns an empty list if no matches are found or if a database error occurs.
+     * @throws / / org.springframework.jdbc.JdbcSQLException If a database access error occurs (logged and handled by returning an empty list).
      */
     @Override
     public List<SparesDTO> searchSparesByPartNumber(String searchTerm, int partOrderId) {
         try {
             String query = """
-                SELECT *
-                FROM spares
-                WHERE (spare_item LIKE ? OR replacement_item LIKE ?)
-                GROUP BY spare_item;
-                """;
+                    SELECT *
+                    FROM spares
+                    WHERE (spare_item LIKE ? OR replacement_item LIKE ?)
+                    GROUP BY spare_item;
+                    """;
 
             // Use % for partial matching
             String searchPattern = "%" + searchTerm + "%";
@@ -567,9 +568,9 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
      * @param ranges An array of range keywords to search for in the {@code pim} column. Must not be null or empty.
      *               The keyword "all" triggers a count of all tuples in the {@code spares} table.
      * @return An integer representing the total count of matching tuples. If "all" is present, returns the count of all
-     *         tuples in the {@code spares} table. Otherwise, returns the sum of distinct tuples matching each range keyword.
-     *         Returns 0 if no matches are found, the input is invalid, or a database error occurs.
-     * @throws // org.springframework.jdbc.JdbcSQLException If a database access error occurs (logged and handled by returning 0).
+     * tuples in the {@code spares} table. Otherwise, returns the sum of distinct tuples matching each range keyword.
+     * Returns 0 if no matches are found, the input is invalid, or a database error occurs.
+     * @throws / / org.springframework.jdbc.JdbcSQLException If a database access error occurs (logged and handled by returning 0).
      */
     @Override
     public int countSparesByRanges(String[] ranges) {
@@ -602,10 +603,10 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             }
 
             String query = String.format("""
-            SELECT COUNT(DISTINCT spare_item) AS range_count
-            FROM spares
-            WHERE %s
-        """, whereBuilder);
+                        SELECT COUNT(DISTINCT spare_item) AS range_count
+                        FROM spares
+                        WHERE %s
+                    """, whereBuilder);
 
             logger.info("Counting spares for ranges: {}", Arrays.toString(ranges));
             Integer result = jdbcTemplate.queryForObject(query, Integer.class, params.toArray());
@@ -624,39 +625,39 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
      * @param date The date (in string format) to filter spares by their added_to_catalogue date.
      *             The date should match the format expected by the database (e.g., 'YYYY-MM-DD').
      * @return A list of {@link SparesDTO} objects representing spares added on the specified date.
-     *         Returns an empty list if no spares match the criteria.
+     * Returns an empty list if no spares match the criteria.
      */
     @Override
     public List<SparesDTO> findSparesAdded(String date) {
         String sql = """
-            SELECT *
-            FROM spares
-            WHERE added_to_catalogue IS NOT NULL
-              AND DATE(added_to_catalogue) IS NOT NULL
-              AND DATE(added_to_catalogue) = added_to_catalogue
-              AND added_to_catalogue > ?
-            """;
+                SELECT *
+                FROM spares
+                WHERE added_to_catalogue IS NOT NULL
+                  AND DATE(added_to_catalogue) IS NOT NULL
+                  AND DATE(added_to_catalogue) = added_to_catalogue
+                  AND added_to_catalogue > ?
+                """;
         return jdbcTemplate.query(sql, new SparesRowMapper(), date);
     }
 
     public List<SparesDTO> findSparesRemovedFromCatalogue(String date) {
         String sql = """
-                SELECT *
-                 FROM spares
-                 WHERE removed_from_catalogue IS NOT NULL
-                   AND DATE(removed_from_catalogue) IS NOT NULL
-                   AND DATE(removed_from_catalogue) = removed_from_catalogue
-                   AND removed_from_catalogue > ?
-            """;
-        return jdbcTemplate.query(sql, new SparesRowMapper(),date);
+                    SELECT *
+                     FROM spares
+                     WHERE removed_from_catalogue IS NOT NULL
+                       AND DATE(removed_from_catalogue) IS NOT NULL
+                       AND DATE(removed_from_catalogue) = removed_from_catalogue
+                       AND removed_from_catalogue > ?
+                """;
+        return jdbcTemplate.query(sql, new SparesRowMapper(), date);
     }
 
     @Override
     public List<ReplacementCrDTO> findAllReplacementCr() {
         String sql = """
-            SELECT *
-            FROM replacement_cr
-            """;
+                SELECT *
+                FROM replacement_cr
+                """;
         return jdbcTemplate.query(sql, new ReplacementCrRowMapper());
     }
 
@@ -757,10 +758,10 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     @Override
     public boolean existsBySpareItem(String spareItem) {
         String sql = """
-            SELECT COUNT(*) 
-            FROM spares 
-            WHERE spare_item = ?
-            """;
+                SELECT COUNT(*) 
+                FROM spares 
+                WHERE spare_item = ?
+                """;
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareItem);
         return count != null && count > 0;
@@ -769,10 +770,10 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     @Override
     public void appendCommentBySpareItem(String spareItem, String newComment) {
         String sql = """
-        UPDATE spares
-        SET comments = COALESCE(comments, '') || ? || ?
-        WHERE spare_item = ?
-        """;
+                UPDATE spares
+                SET comments = COALESCE(comments, '') || ? || ?
+                WHERE spare_item = ?
+                """;
         jdbcTemplate.update(sql, newComment, "\r\n", spareItem);
     }
 
@@ -791,9 +792,9 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         List<SparePictureDTO> deduplicatedPictures = new ArrayList<>(uniqueBySpareName.values());
 
         String sql = """
-        INSERT INTO spare_pictures (spare_name, picture)
-        VALUES (?, ?)
-        """;
+                INSERT INTO spare_pictures (spare_name, picture)
+                VALUES (?, ?)
+                """;
         try {
             jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
                 @Override
@@ -858,4 +859,302 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         logger.info("Updated {} spares in production database.", totalRowsAffected);
         return totalRowsAffected;
     }
+
+    @Override
+    public Map<String, Map<String, Set<String>>> getAllSpareRangeProductsBulk(boolean isArchived) {
+        int archived = isArchived ? 1 : 0;
+
+        String sql = """
+                SELECT 
+                    spare_item,
+                    pim_range,
+                    pim_product_family
+                FROM product_to_spares
+                WHERE archived = ?
+                  AND pim_range IS NOT NULL AND pim_range != ''
+                  AND pim_product_family IS NOT NULL AND pim_product_family != ''
+                ORDER BY spare_item, pim_range, pim_product_family
+                """;
+
+        Map<String, Map<String, Set<String>>> result = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql, rs -> {
+            String spare = rs.getString("spare_item");
+            String range = rs.getString("pim_range");
+            String product = rs.getString("pim_product_family");
+
+            // Safe navigation + initialization
+            result.computeIfAbsent(spare, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(range, k -> new LinkedHashSet<>())
+                    .add(product);
+        }, archived);
+
+        return result;
+    }
+
+    @Override
+    public Set<String> getExistingSparesInSparesTable(Collection<String> spares, boolean isArchived) {
+        if (spares.isEmpty()) return Set.of();
+
+        int archived = isArchived ? 1 : 0;
+
+        String sql = """
+                SELECT spare_item 
+                FROM spares 
+                WHERE archived = ? 
+                  AND spare_item IN (""" + String.join(",", Collections.nCopies(spares.size(), "?")) + ")";
+
+        Set<String> existing = new HashSet<>();
+
+        jdbcTemplate.query(
+                sql,
+                ps -> {
+                    ps.setInt(1, archived);
+                    int idx = 2;
+                    for (String s : spares) {
+                        ps.setString(idx++, s);
+                    }
+                },
+                rs -> {
+                    existing.add(rs.getString("spare_item"));
+                }
+        );
+
+        return existing;
+    }
+
+    @Override
+    public void batchInsertConsolidated(Collection<ProductToSparesDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) return;
+
+        List<ProductToSparesDTO> list = (dtos instanceof List<?> l)
+                ? (List<ProductToSparesDTO>) l
+                : new ArrayList<>(dtos);
+
+        final String sql = """
+                INSERT INTO spares (
+                    pim, spare_item, replacement_item, standard_exchange_item,
+                    spare_description, catalogue_version, end_of_service_date,
+                    last_update, added_to_catalogue, removed_from_catalogue,
+                    comments, keywords, archived, custom_add, last_updated_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ProductToSparesDTO dto = list.get(i);
+
+                ps.setString(1, dto.getPimRange()); // see JSON note below
+                ps.setString(2, dto.getSpareItem());
+                ps.setString(3, dto.getReplacementItem());
+                ps.setString(4, dto.getStandardExchangeItem());
+                ps.setString(5, dto.getSpareDescription());
+                ps.setString(6, dto.getCatalogueVersion());
+                ps.setString(7, dto.getProductEndOfServiceDate());
+                ps.setString(8, dto.getLastUpdate());
+                ps.setString(9, dto.getAddedToCatalogue());
+                ps.setString(10, dto.getRemovedFromCatalogue());
+                ps.setString(11, dto.getComments());
+                ps.setString(12, dto.getKeywords());
+                ps.setBoolean(13, dto.isArchived());
+                ps.setBoolean(14, dto.isCustomAdd());
+                ps.setString(15, dto.getLastUpdatedBy());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return list.size();
+            }
+        });
+    }
+
+
+//    @Override
+//    public void batchInsertConsolidated(List<ProductToSparesDTO> dtos) {
+//        if (dtos.isEmpty()) return;
+//
+//        String sql = """
+//        INSERT INTO spares (
+//            pim, spare_item, replacement_item, standard_exchange_item,
+//            spare_description, catalogue_version, end_of_service_date,
+//            last_update, added_to_catalogue, removed_from_catalogue,
+//            comments, keywords, archived, custom_add, last_updated_by
+//        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//        """;
+//
+//        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+//            @Override
+//            public void setValues(PreparedStatement ps, int i) throws SQLException {
+//                ProductToSparesDTO dto = dtos.get(i);
+//                ps.setString(1,  dto.getPimRange());               // ← JSON here
+//                ps.setString(2,  dto.getSpareItem());
+//                ps.setString(3,  dto.getReplacementItem());
+//                ps.setString(4,  dto.getStandardExchangeItem());
+//                ps.setString(5,  dto.getSpareDescription());
+//                ps.setString(6,  dto.getCatalogueVersion());
+//                ps.setString(7,  dto.getProductEndOfServiceDate());
+//                ps.setString(8,  dto.getLastUpdate());
+//                ps.setString(9,  dto.getAddedToCatalogue());
+//                ps.setString(10, dto.getRemovedFromCatalogue());
+//                ps.setString(11, dto.getComments());
+//                ps.setString(12, dto.getKeywords());
+//                ps.setBoolean(13, dto.isArchived());
+//                ps.setBoolean(14, dto.isCustomAdd());
+//                ps.setString(15, dto.getLastUpdatedBy());
+//            }
+//
+//            @Override
+//            public int getBatchSize() {
+//                return dtos.size();
+//            }
+//        });
+//    }
+
+    @Override
+    public void batchUpdateConsolidated(List<ProductToSparesDTO> dtos) {
+        if (dtos.isEmpty()) return;
+
+        String sql = """
+                    UPDATE spares SET
+                        pim                    = ?,
+                        replacement_item       = ?,
+                        standard_exchange_item = ?,
+                        spare_description      = ?,
+                        catalogue_version      = ?,
+                        end_of_service_date    = ?,
+                        last_update            = ?,
+                        added_to_catalogue     = ?,
+                        removed_from_catalogue = ?,
+                        comments               = ?,
+                        keywords               = ?,
+                        custom_add             = ?,
+                        last_updated_by        = ?
+                    WHERE spare_item = ?
+                      AND archived   = ?
+                """;
+
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ProductToSparesDTO dto = dtos.get(i);
+                int idx = 1;
+                ps.setString(idx++, dto.getPimRange());               // JSON
+                ps.setString(idx++, dto.getReplacementItem());
+                ps.setString(idx++, dto.getStandardExchangeItem());
+                ps.setString(idx++, dto.getSpareDescription());
+                ps.setString(idx++, dto.getCatalogueVersion());
+                ps.setString(idx++, dto.getProductEndOfServiceDate());
+                ps.setString(idx++, dto.getLastUpdate());
+                ps.setString(idx++, dto.getAddedToCatalogue());
+                ps.setString(idx++, dto.getRemovedFromCatalogue());
+                ps.setString(idx++, dto.getComments());
+                ps.setString(idx++, dto.getKeywords());
+                ps.setBoolean(idx++, dto.isCustomAdd());
+                ps.setString(idx++, dto.getLastUpdatedBy());
+
+                // WHERE clause
+                ps.setString(idx++, dto.getSpareItem());
+                ps.setBoolean(idx++, dto.isArchived());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return dtos.size();
+            }
+        });
+    }
+
+//    Default page_size is now 4096 bytes (good for most cases); no need to change unless testing shows benefit (e.g., 8192 or 65536 for very large rows).
+//    PRAGMA optimize at the end of import can help future queries (but not inserts): jdbcTemplate.execute("PRAGMA optimize;");
+//    WAL is preferred over MEMORY/OFF in recent advice (even for bulk) because it still allows decent recovery.
+//    Test crash safety if using OFF: Kill the JVM mid-import → is data intact? WAL helps a lot here.
+//    Hardware matters: SSD >> HDD. If on slow storage, gains will be smaller.
+//    Row count estimate: Your ~18 MB SQL file suggests roughly 5,000–15,000 rows (depending on data). With transaction + these PRAGMAs, expect 30–180 seconds total in aggressive mode
+    @Override
+    public void changePRAGMASettinsForInsert() {
+        // Run these once before any inserts
+        jdbcTemplate.execute("PRAGMA journal_mode = WAL;");
+        jdbcTemplate.execute("PRAGMA synchronous = NORMAL;");
+        jdbcTemplate.execute("PRAGMA cache_size = -32000;");
+        jdbcTemplate.execute("PRAGMA temp_store = MEMORY;");
+    }
+//    PRAGMA journal_mode = MEMORY;         -- or OFF for even more speed
+//    PRAGMA synchronous = OFF;
+//    PRAGMA cache_size = -64000;           -- ~64 MB
+//    PRAGMA temp_store = MEMORY;
+//    PRAGMA locking_mode = EXCLUSIVE;      -- if no other threads/processes touch the DB
+//-- Optional: PRAGMA mmap_size = 1073741824;  -- 1 GB, if you have RAM
+
+    @Override
+    public void insertProductToSparesInBatch(final List<ProductToSparesDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        final String sql =
+                "INSERT INTO product_to_spares (" +
+                        "pim_range, pim_product_family, spare_item, replacement_item, " +
+                        "standard_exchange_item, spare_description, catalogue_version, " +
+                        "end_of_service_date, last_update, added_to_catalogue, removed_from_catalogue, " +
+                        "comments, keywords, archived, custom_add, last_updated_by) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        jdbcTemplate.execute((ConnectionCallback<Object>) conn -> {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try {
+                jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                    @Override
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        ProductToSparesDTO dto = dtos.get(i);
+
+                        ps.setString(1, dto.getPimRange());
+                        ps.setString(2, dto.getPimProductFamily());
+                        ps.setString(3, dto.getSpareItem());
+                        ps.setString(4, dto.getReplacementItem());
+                        ps.setString(5, dto.getStandardExchangeItem());
+                        ps.setString(6, dto.getSpareDescription());
+                        ps.setString(7, dto.getCatalogueVersion());
+                        ps.setString(8, dto.getProductEndOfServiceDate());
+                        ps.setString(9, dto.getLastUpdate());
+                        ps.setString(10, dto.getAddedToCatalogue());
+                        ps.setString(11, dto.getRemovedFromCatalogue());
+                        ps.setString(12, dto.getComments());
+                        ps.setString(13, dto.getKeywords());
+                        ps.setBoolean(14, dto.isArchived());
+                        ps.setBoolean(15, dto.isCustomAdd());
+                        ps.setString(16, dto.getLastUpdatedBy());
+                    }
+
+                    @Override
+                    public int getBatchSize() {
+                        return dtos.size();
+                    }
+                });
+
+                conn.commit();
+
+            } catch (Exception e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    // usually safe to ignore or just log
+                }
+                throw new RuntimeException("Batch insert failed", e);
+
+            } finally {
+                try {
+                    conn.setAutoCommit(originalAutoCommit);
+                } catch (SQLException ignored) {
+                    // best effort
+                }
+            }
+
+            return null;
+        });
+    }
 }
+
+

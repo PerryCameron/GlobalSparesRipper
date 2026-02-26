@@ -19,99 +19,99 @@ public class ExcelRipper {
     private static final Logger logger = LoggerFactory.getLogger(ExcelRipper.class);
     private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
     private static List<ProductToSparesDTO> editedSpares = new ArrayList<>();
+//
+//    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
+//        Sheet sheet = workbook.getSheet("Product to Spares");
+//        if (sheet == null) {
+//            System.out.println("Sheet 'Product to Spares' not found.");
+//            return false;
+//        }
+//        // extracts metadata from workbook
+//        logger.info("Saving Meta data properties");
+//        extractWorkbookProperties(workbook, globalSparesRepository);
+//
+//        // here is where we fill the product to spares table with items in the catelogue
+//        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
+//        logger.info("Ripping Product to Spares");  // succeeds
+//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
+//
+//        // here is where we fill the product to spares table with items that are archived
+//        productToSpares.setArchived(true);
+//        sheet = workbook.getSheet("Archived Product to Spares");
+//        logger.info("Ripping Archived Product to Spares");  // succeeds
+//        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
+//
+//        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
+//        // here is where we fill our replament_cr table with 3-phase
+//        sheet = workbook.getSheet("Replacement CRs");
+//        logger.info("Ripping Replacement CRs (3-ph)");
+//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+//
+//        // here is where we fill our replacement_cr with uniflair
+//        sheet = workbook.getSheet("Uniflair Cross Reference");
+//        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
+//        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
+//
+//        logger.info("Consolidating Product to Spares ");  // this fails
+//        consolidateWithJSON(false, globalSparesRepository);
+//
+//        logger.info("Consolidating Archived Product to Spares");
+//        consolidateWithJSON(true, globalSparesRepository);
+//
+//        return true;
+//    }
 
-    public static boolean extractWorkbookToSql(XSSFWorkbook workbook) {
-        Sheet sheet = workbook.getSheet("Product to Spares");
-        if (sheet == null) {
-            System.out.println("Sheet 'Product to Spares' not found.");
-            return false;
-        }
-        // extracts metadata from workbook
-        logger.info("Saving Meta data properties");
-        extractWorkbookProperties(workbook, globalSparesRepository);
-
-        // here is where we fill the product to spares table with items in the catelogue
-        ProductToSparesDTO productToSpares = new ProductToSparesDTO(false, false);  // archived, customadd
-        logger.info("Ripping Product to Spares");  // succeeds
-        extractProductToSpares(sheet, productToSpares, globalSparesRepository, false);
-
-        // here is where we fill the product to spares table with items that are archived
-        productToSpares.setArchived(true);
-        sheet = workbook.getSheet("Archived Product to Spares");
-        logger.info("Ripping Archived Product to Spares");  // succeeds
-        extractProductToSpares(sheet, productToSpares, globalSparesRepository, true);
-
-        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
-        // here is where we fill our replament_cr table with 3-phase
-        sheet = workbook.getSheet("Replacement CRs");
-        logger.info("Ripping Replacement CRs (3-ph)");
-        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-
-        // here is where we fill our replacement_cr with uniflair
-        sheet = workbook.getSheet("Uniflair Cross Reference");
-        logger.info("Ripping Replacement CRs (Uniflair Cross Reference)");
-        extractReplacementCr(sheet, replacementCrDTO, globalSparesRepository);
-
-        logger.info("Consolidating Product to Spares ");  // this fails
-        consolidateWithJSON(false, globalSparesRepository);
-
-        logger.info("Consolidating Archived Product to Spares");
-        consolidateWithJSON(true, globalSparesRepository);
-
-        return true;
-    }
-
-    public static void consolidateWithJSON(boolean isArchived, GlobalSparesRepository globalSparesRepository) {
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        // get a list of just the spares (part numbers) as strings distinct with no duplicates from product_to_spares
-        List<String> compactedSpares = globalSparesRepository.getDistinctSpareItems(isArchived);
-
-        compactedSpares.forEach(spare -> {
-            logger.info("Processing for: {}------------------------------", spare);
-
-            // Get pim_range values for this spare_item from product_to_spares
-            List<String> ranges = globalSparesRepository.getRangesFromSpareItem(spare, isArchived);
-            // Build JSON for pim column
-            List<Map<String, Object>> pimData = new ArrayList<>();
-            for (String range : ranges) {
-                // gets products from the range of the spare
-                List<String> products = globalSparesRepository.getProductsFromRange(spare, range, isArchived);
-                if (!products.isEmpty()) {
-                    Map<String, Object> rangeEntry = new HashMap<>();
-                    rangeEntry.put("range", range);
-                    rangeEntry.put("product_families", products);
-                    pimData.add(rangeEntry);
-                }
-            }
-            // Skip if no pim data
-            if (pimData.isEmpty()) {
-                logger.warn("No pim data for spare_item: {}", spare);
-                return;
-            }
-            // Convert pimData to JSON
-            String pimJson;
-            try {
-                pimJson = objectMapper.writeValueAsString(pimData);
-            } catch (Exception e) {
-                logger.error("Error serializing JSON for spare_item: {}", spare, e);
-                return;
-            }
-            // The spare does not yet exist so it is ok to insert it
-            ProductToSparesDTO productToSpares = globalSparesRepository.getProductToSpares(spare, isArchived);
-            if(globalSparesRepository.getSpareItemId(spare) == 0) {
-                logger.info("Spare: {}, Replacement Item: {}", spare, productToSpares.getReplacementItem());
-                productToSpares.setPimProductFamily("");
-                productToSpares.setPimRange(pimJson);
-                System.out.println(productToSpares);
-                // inserts into spares using data from productToSpares
-                globalSparesRepository.insertConsolidatedProductToSpare(productToSpares);
-            } else { // the spare exists, we need to update it
-                logger.warn("Spare exists: setting aside");
-                editedSpares.add(productToSpares);
-            }
-        });
-    }
+//    public static void consolidateWithJSON(boolean isArchived, GlobalSparesRepository globalSparesRepository) {
+//        ObjectMapper objectMapper = new ObjectMapper();
+//
+//        // get a list of just the spares (part numbers) as strings distinct with no duplicates from product_to_spares
+//        List<String> compactedSpares = globalSparesRepository.getDistinctSpareItems(isArchived);
+//
+//        compactedSpares.forEach(spare -> {
+//            logger.info("Processing for: {}------------------------------", spare);
+//
+//            // Get pim_range values for this spare_item from product_to_spares
+//            List<String> ranges = globalSparesRepository.getRangesFromSpareItem(spare, isArchived);
+//            // Build JSON for pim column
+//            List<Map<String, Object>> pimData = new ArrayList<>();
+//            for (String range : ranges) {
+//                // gets products from the range of the spare
+//                List<String> products = globalSparesRepository.getProductsFromRange(spare, range, isArchived);
+//                if (!products.isEmpty()) {
+//                    Map<String, Object> rangeEntry = new HashMap<>();
+//                    rangeEntry.put("range", range);
+//                    rangeEntry.put("product_families", products);
+//                    pimData.add(rangeEntry);
+//                }
+//            }
+//            // Skip if no pim data
+//            if (pimData.isEmpty()) {
+//                logger.warn("No pim data for spare_item: {}", spare);
+//                return;
+//            }
+//            // Convert pimData to JSON
+//            String pimJson;
+//            try {
+//                pimJson = objectMapper.writeValueAsString(pimData);
+//            } catch (Exception e) {
+//                logger.error("Error serializing JSON for spare_item: {}", spare, e);
+//                return;
+//            }
+//            // The spare does not yet exist so it is ok to insert it
+//            ProductToSparesDTO productToSpares = globalSparesRepository.getProductToSpares(spare, isArchived);
+//            if(globalSparesRepository.getSpareItemId(spare) == 0) {
+//                logger.info("Spare: {}, Replacement Item: {}", spare, productToSpares.getReplacementItem());
+//                productToSpares.setPimProductFamily("");
+//                productToSpares.setPimRange(pimJson);
+//                System.out.println(productToSpares);
+//                // inserts into spares using data from productToSpares
+//                globalSparesRepository.insertConsolidatedProductToSpare(productToSpares);
+//            } else { // the spare exists, we need to update it
+//                logger.warn("Spare exists: setting aside");
+//                editedSpares.add(productToSpares);
+//            }
+//        });
+//    }
 
     public static boolean cleanUpDatabase() {
         globalSparesRepository.dropProductToSparesAndVacuum();

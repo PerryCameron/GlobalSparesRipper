@@ -2,7 +2,10 @@ package com.l2.repository.interfaces;
 
 import com.l2.dto.*;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public interface GlobalSparesRepository {
 
@@ -59,4 +62,16 @@ public interface GlobalSparesRepository {
     void insertSparePictures(List<SparePictureDTO> sparePictures);
 
     int updateSpares(List<SparesDTO> spares);
+
+    Map<String, Map<String, Set<String>>> getAllSpareRangeProductsBulk(boolean isArchived);
+
+    Set<String> getExistingSparesInSparesTable(Collection<String> spares, boolean isArchived);
+
+    void batchInsertConsolidated(Collection<ProductToSparesDTO> dtos);
+
+    void batchUpdateConsolidated(List<ProductToSparesDTO> dtos);
+
+    void changePRAGMASettinsForInsert();
+
+    void insertProductToSparesInBatch(List<ProductToSparesDTO> dtos);
 }
