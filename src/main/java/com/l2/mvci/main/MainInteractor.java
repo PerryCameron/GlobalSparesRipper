@@ -148,9 +148,9 @@ public class MainInteractor {
         model.getTa().appendText("Conversion started...\n");
         globalSparesRepository.changePRAGMASettinsForInsert();
 
-        ProductToSparesDTO dto = new ProductToSparesDTO(false, false);  // shared, but mutated per phase
-        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
-        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
+//        ProductToSparesDTO dto = new ProductToSparesDTO(false, false);  // shared, but mutated per phase
+//        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
+//        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
         ObjectMapper objectMapper = new ObjectMapper();
 
         // Start the chain
@@ -164,7 +164,7 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 "Product to Spares",
                 () -> getSheet("Product to Spares").ifPresent(sheet ->
-                        extractProductToSpares(sheet, dto, false, model.getProductToSparesTotal())
+                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
                 )
         ), backgroundExec);
 
@@ -174,36 +174,36 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 "Archived Product to Spares",
                 () -> {
-                    dto.setArchived(true);
+//                    dto.setArchived(true);
                     getSheet("Archived Product to Spares").ifPresent(sheet ->
-                            extractProductToSpares(sheet, dto, true, model.getArchivedProductToSparesTotal())
+                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
                     );
                 }
         ), backgroundExec);
 
-        // ──────────────────────────────────────────────────────
-        // Phase 3 Replacement CRs
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Replacement CRs",
-//                () -> {
-//                    getSheet("Replacement CRs").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, replacementCrDTO, model.getReplacementCRs())
-//                    );
-//                }
-//        ), backgroundExec);
+//         ──────────────────────────────────────────────────────
+//         Phase 3 Replacement CRs
+//         ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                "Replacement CRs",
+                () -> {
+                    getSheet("Replacement CRs").ifPresent(sheet ->
+                            extractReplacementCr(sheet, model.getReplacementCRs())
+                    );
+                }
+        ), backgroundExec);
 
-        // ──────────────────────────────────────────────────────
-        // Phase 4 Uniflair Cross Reference
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Uniflair Cross Reference",
-//                () -> {
-//                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, replacementCrDTO, model.getUniflairCrossReference())
-//                    );
-//                }
-//        ), backgroundExec);
+//         ──────────────────────────────────────────────────────
+//         Phase 4 Uniflair Cross Reference
+//         ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                "Uniflair Cross Reference",
+                () -> {
+                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+                            extractReplacementCr(sheet, model.getUniflairCrossReference())
+                    );
+                }
+        ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 5 Consolidating Product to Spares
         // ──────────────────────────────────────────────────────
@@ -252,7 +252,6 @@ public class MainInteractor {
 
     }
 
-
     // helper to return specified sheet
     private Optional<Sheet> getSheet(String sheetName) {
         Sheet sheet = model.getWorkbook().getSheet(sheetName);
@@ -263,185 +262,193 @@ public class MainInteractor {
     }
 
 //     This is the slow, but it does correctly work
-//    public void consolidateWithJSON(
-//            boolean isArchived,
-//            List<ProductToSparesDTO> editedSpares,
-//            ObjectMapper objectMapper) {
-//
-//        // get a list of just the spares (part numbers) as strings distinct with no duplicates from product_to_spares
-//        List<String> compactedSpares = globalSparesRepository.getDistinctSpareItems(isArchived);
-//        double step = 1.0 / compactedSpares.size();
-//
-//        compactedSpares.forEach(spare -> {
-//            // Get pim_range values for this spare_item from product_to_spares
-//            List<String> ranges = globalSparesRepository.getRangesFromSpareItem(spare, isArchived);
-//            // Build JSON for pim column
-//            List<Map<String, Object>> pimData = new ArrayList<>();
-//            for (String range : ranges) {
-//                // gets products from the range of the spare
-//                List<String> products = globalSparesRepository.getProductsFromRange(spare, range, isArchived);
-//                if (!products.isEmpty()) {
-//                    Map<String, Object> rangeEntry = new HashMap<>();
-//                    rangeEntry.put("range", range);
-//                    rangeEntry.put("product_families", products);
-//                    pimData.add(rangeEntry);
-//                }
-//            }
-//            // Skip if no pim data
-//            if (pimData.isEmpty()) {
-//                logger.warn("No pim data for spare_item: {}", spare);
-//                return;
-//            }
-//            // Convert pimData to JSON
-//            String pimJson;
-//            try {
-//                pimJson = objectMapper.writeValueAsString(pimData);
-//            } catch (Exception e) {
-//                logger.error("Error serializing JSON for spare_item: {}", spare, e);
-//                return;
-//            }
-//            // The spare does not yet exist so it is ok to insert it
-//            ProductToSparesDTO productToSpares = globalSparesRepository.getProductToSpares(spare, isArchived);
-//            if(globalSparesRepository.getSpareItemId(spare) == 0) {
-//                // logger.info("Spare: {}, Replacement Item: {}", spare, productToSpares.getReplacementItem());
-//                productToSpares.setPimProductFamily("");
-//                productToSpares.setPimRange(pimJson);
-//                // inserts into spares using data from productToSpares
-//                globalSparesRepository.insertConsolidatedProductToSpare(productToSpares);
-//            } else { // the spare exists, we need to update it
-//                logger.warn("Spare exists: setting aside");
-//                editedSpares.add(productToSpares);
-//            }
-//            moveProgressIndicator(step);
-//        });
-//    }
-
     public void consolidateWithJSON(
             boolean isArchived,
             List<ProductToSparesDTO> editedSpares,
             ObjectMapper objectMapper) {
 
-        var allData = globalSparesRepository.getAllSpareRangeProductsBulk(isArchived);
-        if (allData.isEmpty()) return;
+        // "SELECT DISTINCT spare_item FROM product_to_spares WHERE product_to_spares.archived = ? ORDER BY spare_item";
+        List<String> compactedSpares = globalSparesRepository.getDistinctSpareItems(isArchived);
+        // step for Progress Indicator feedback
+        double step = 1.0 / compactedSpares.size();
 
-        // We only process spares that actually have data
-        List<String> spares = new ArrayList<>(allData.keySet());
-
-        Set<String> alreadyExist = globalSparesRepository
-                .getExistingSparesInSparesTable(spares, isArchived);
-
-        Map<String, ProductToSparesDTO> toInsertMap = new LinkedHashMap<>();  // preserves order if needed
-
-        double step = 1.0 / spares.size();
-
-        for (String spare : spares) {
-            var rangeToProducts = allData.get(spare);
-            if (rangeToProducts == null || rangeToProducts.isEmpty()) continue;
-
+        compactedSpares.forEach(spare -> {
+            // Get pim_range values for this spare_item from product_to_spares
+            // SELECT DISTINCT pim_range FROM product_to_spares WHERE spare_item = ? AND product_to_spares.archived = ?
+            List<String> ranges = globalSparesRepository.getRangesFromSpareItem(spare, isArchived);
+            // Build JSON for pim column
             List<Map<String, Object>> pimData = new ArrayList<>();
-            for (var entry : rangeToProducts.entrySet()) {
-                String range = entry.getKey();
-                Set<String> products = (Set<String>) entry.getValue();
+            // for each range
+            for (String range : ranges) {
+                // gets products from the range of the spare
+                // SELECT DISTINCT product_to_spares.pim_product_family from product_to_spares where spare_item = ? and pim_range = ? and product_to_spares.archived = ?";
+                List<String> products = globalSparesRepository.getProductsFromRange(spare, range, isArchived);
                 if (!products.isEmpty()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("range", range);
-                    m.put("product_families", new ArrayList<>(products));  // ← convert to list here
-                    pimData.add(m);
+                    Map<String, Object> rangeEntry = new HashMap<>();
+                    rangeEntry.put("range", range);
+                    rangeEntry.put("product_families", products);
+                    pimData.add(rangeEntry);
                 }
             }
-
-            if (pimData.isEmpty()) continue;
-
+            // Skip if no pim data
+            if (pimData.isEmpty()) {
+                logger.warn("No pim data for spare_item: {}", spare);
+                return;
+            }
+            // Convert pimData to JSON
             String pimJson;
             try {
                 pimJson = objectMapper.writeValueAsString(pimData);
             } catch (Exception e) {
-                logger.error("JSON serialization failed for spare {}", spare, e);
-                continue;
+                logger.error("Error serializing JSON for spare_item: {}", spare, e);
+                return;
             }
-
-            // We still need one DTO per spare (for other fields)
-            ProductToSparesDTO dto = globalSparesRepository.getProductToSpares(spare, isArchived);
-            if (dto == null) {
-                logger.warn("No product_to_spares row found for spare: {}", spare);
-                continue;
+            // The spare does not yet exist so it is ok to insert it
+            ProductToSparesDTO productToSpares = globalSparesRepository.getProductToSpares(spare, isArchived);
+            if(globalSparesRepository.getSpareItemId(spare) == 0) {
+                // logger.info("Spare: {}, Replacement Item: {}", spare, productToSpares.getReplacementItem());
+                productToSpares.setPimProductFamily("");
+                productToSpares.setPimRange(pimJson);
+                // inserts into spares using data from productToSpares
+                globalSparesRepository.insertConsolidatedProductToSpare(productToSpares);
+            } else { // the spare exists, we need to update it
+                logger.warn("Spare exists: setting aside");
+                editedSpares.add(productToSpares);
             }
-
-            dto.setPimRange(pimJson);
-            dto.setPimProductFamily("");   // as in your original logic
-
-            if (!alreadyExist.contains(spare)) {
-                toInsertMap.putIfAbsent(spare, dto);   // only keep first occurrence
-            }
-
             moveProgressIndicator(step);
-        }
-
-        if (!toInsertMap.isEmpty()) {
-            Set<ProductToSparesDTO> toInsert = new LinkedHashSet<>(toInsertMap.values());
-            globalSparesRepository.batchInsertConsolidated(toInsert);
-        }
+        });
     }
+
+
+//    public void consolidateWithJSON(
+//            boolean isArchived,
+//            List<ProductToSparesDTO> editedSpares,
+//            ObjectMapper objectMapper) {
+//
+//        var allData = globalSparesRepository.getAllSpareRangeProductsBulk(isArchived);
+//        if (allData.isEmpty()) return;
+//
+//        // We only process spares that actually have data
+//        List<String> spares = new ArrayList<>(allData.keySet());
+//
+//        Set<String> alreadyExist = globalSparesRepository
+//                .getExistingSparesInSparesTable(spares, isArchived);
+//
+//        Map<String, ProductToSparesDTO> toInsertMap = new LinkedHashMap<>();  // preserves order if needed
+//
+//        double step = 1.0 / spares.size();
+//
+//        for (String spare : spares) {
+//            var rangeToProducts = allData.get(spare);
+//            if (rangeToProducts == null || rangeToProducts.isEmpty()) continue;
+//
+//            List<Map<String, Object>> pimData = new ArrayList<>();
+//            for (var entry : rangeToProducts.entrySet()) {
+//                String range = entry.getKey();
+//                Set<String> products = (Set<String>) entry.getValue();
+//                if (!products.isEmpty()) {
+//                    Map<String, Object> m = new HashMap<>();
+//                    m.put("range", range);
+//                    m.put("product_families", new ArrayList<>(products));  // ← convert to list here
+//                    pimData.add(m);
+//                }
+//            }
+//
+//            if (pimData.isEmpty()) continue;
+//
+//            String pimJson;
+//            try {
+//                pimJson = objectMapper.writeValueAsString(pimData);
+//            } catch (Exception e) {
+//                logger.error("JSON serialization failed for spare {}", spare, e);
+//                continue;
+//            }
+//
+//            // We still need one DTO per spare (for other fields)
+//            ProductToSparesDTO dto = globalSparesRepository.getProductToSpares(spare, isArchived);
+//            if (dto == null) {
+//                logger.warn("No product_to_spares row found for spare: {}", spare);
+//                continue;
+//            }
+//
+//            dto.setPimRange(pimJson);
+//            dto.setPimProductFamily("");   // as in your original logic
+//
+//            if (!alreadyExist.contains(spare)) {
+//                toInsertMap.putIfAbsent(spare, dto);   // only keep first occurrence
+//            }
+//
+//            moveProgressIndicator(step);
+//        }
+//
+//        if (!toInsertMap.isEmpty()) {
+//            Set<ProductToSparesDTO> toInsert = new LinkedHashSet<>(toInsertMap.values());
+//            globalSparesRepository.batchInsertConsolidated(toInsert);
+//        }
+//    }
 
     public void extractReplacementCr(
             Sheet sheet,
-            ReplacementCrDTO replacementCrDTO,
             double total) {
 
-        DataFormatter formatter = new DataFormatter(); // formats like Excel
+        DataFormatter formatter = new DataFormatter();
         double step = 1.0 / total;
-        // Define how many columns you expect in this sheet
-        final int expectedCols = 5; // columns 0..4 (Item, Replacement, Comment, OldQty, NewQty)
 
-        for (int r = sheet.getFirstRowNum(); r <= sheet.getLastRowNum(); r++) {
-            // if (r >= 1000) break; // temp throttle if needed
-            if (r < 3) continue;
+        // We'll create fresh DTOs — reusing one object can be error-prone with batching
+        List<ReplacementCrDTO> batch = new ArrayList<>(1000);
 
+        // Adjust starting row if your header is on row 1 or 2 (0-based)
+        for (int r = Math.max(3, sheet.getFirstRowNum()); r <= sheet.getLastRowNum(); r++) {
             Row row = sheet.getRow(r);
             if (row == null) continue;
 
-            // Reset DTO for this row
-            replacementCrDTO.clear();
+            ReplacementCrDTO dto = new ReplacementCrDTO();
 
-            for (int col = 0; col < expectedCols; col++) {
+            for (int col = 0; col < 5; col++) {   // columns A–E (0–4)
                 Cell cell = row.getCell(col, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-
-                // Prefer numeric parsing for qty columns, but keep a string for others
-                String cellText = formatter.formatCellValue(cell).trim();
+                String text = formatter.formatCellValue(cell).trim();
 
                 switch (col) {
-                    case 0 -> replacementCrDTO.setItem(cellText);
-                    case 1 -> replacementCrDTO.setReplacement(cellText);
-                    case 2 -> replacementCrDTO.setComment(cellText);
+                    case 0 -> dto.setItem(text);
+                    case 1 -> dto.setReplacement(text);
+                    case 2 -> dto.setComment(text.isEmpty() ? null : text);
 
                     case 3 -> { // OldQty
-                        // If the cell type is numeric, read it directly; else try parsing the text
-                        Double val = parseDoubleCell(cell, cellText, 0.0);
-                        replacementCrDTO.setOldQty(val);
+                        dto.setOldQty(parseDoubleCell(cell, text, 0.0));
                     }
-
                     case 4 -> { // NewQty
-                        Double val = parseDoubleCell(cell, cellText, 0.0);
-                        replacementCrDTO.setNewQty(val);
+                        dto.setNewQty(parseDoubleCell(cell, text, 0.0));
                     }
-
-                    default -> { /* ignore extras */ }
                 }
             }
 
-            // Write only if item is present
-            if (replacementCrDTO.getItem() != null && !replacementCrDTO.getItem().isEmpty()) {
-                globalSparesRepository.insertReplacementCr(replacementCrDTO);
+            // Skip invalid rows (core business rule)
+            if (dto.getItem() == null || dto.getItem().isBlank()) {
+                continue;
             }
+
+            batch.add(dto);
+
+            // Flush batch when large enough
+            if (batch.size() >= 1000) {
+                globalSparesRepository.insertReplacementCrInBatch(batch);
+                batch.clear();
+                // Optional: update UI progress bar
+                // moveProgressIndicator(1000 * step);
+            }
+
             moveProgressIndicator(step);
         }
 
+        // Final batch (remainder)
+        if (!batch.isEmpty()) {
+            globalSparesRepository.insertReplacementCrInBatch(batch);
+        }
     }
 
     // I am not using Spring Boot, just the jdbcTemplate library, is this correct?
     public void extractProductToSpares(
             Sheet sheet,
-            ProductToSparesDTO prototype,   // ← you can reuse one instance and clear it
             boolean isArchived,
             double total) {
 
@@ -464,21 +471,21 @@ public class MainInteractor {
                 String val = formatter.formatCellValue(cell).trim();
 
                 switch (col) {
-                    case 0  -> dto.setPimRange(val);
-                    case 1  -> dto.setPimProductFamily(val);
-                    case 2  -> dto.setSpareItem(val);
-                    case 3  -> dto.setReplacementItem(val);
-                    case 4  -> dto.setStandardExchangeItem(val);
-                    case 5  -> dto.setSpareDescription(val);
-                    case 6  -> dto.setCatalogueVersion(val);
-                    case 7  -> dto.setProductEndOfServiceDate(val);
-                    case 8  -> {
+                    case 0 -> dto.setPimRange(val);
+                    case 1 -> dto.setPimProductFamily(val);
+                    case 2 -> dto.setSpareItem(val);
+                    case 3 -> dto.setReplacementItem(val);
+                    case 4 -> dto.setStandardExchangeItem(val);
+                    case 5 -> dto.setSpareDescription(val);
+                    case 6 -> dto.setCatalogueVersion(val);
+                    case 7 -> dto.setProductEndOfServiceDate(val);
+                    case 8 -> {
                         if (isArchived) dto.setRemovedFromCatalogue(val);
-                        else            dto.setLastUpdate(val);
+                        else dto.setLastUpdate(val);
                     }
-                    case 9  -> {
+                    case 9 -> {
                         if (isArchived) dto.setComments(val);
-                        else            dto.setAddedToCatalogue(val);
+                        else dto.setAddedToCatalogue(val);
                     }
                     case 10 -> {
                         if (!isArchived) {

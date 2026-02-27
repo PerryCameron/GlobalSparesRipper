@@ -20,7 +20,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -815,256 +814,6 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         }
     }
 
-    @Override
-    public int updateSpares(List<SparesDTO> spares) {
-        if (spares == null || spares.isEmpty()) {
-            logger.info("No spares provided to update in production database.");
-            return 0;
-        }
-
-        String sql = "UPDATE spares SET pim = ?, replacement_item = ?, standard_exchange_item = ?, " +
-                "spare_description = ?, catalogue_version = ?, end_of_service_date = ?, " +
-                "last_update = ?, added_to_catalogue = ?, removed_from_catalogue = ?, " +
-                "comments = ?, keywords = ?, archived = ?, custom_add = ?, last_updated_by = ? " +
-                "WHERE spare_item = ?";
-
-        int[] rowsAffected = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                SparesDTO spare = spares.get(i);
-                ps.setString(1, spare.getPim());
-                ps.setString(2, spare.getReplacementItem());
-                ps.setString(3, spare.getStandardExchangeItem());
-                ps.setString(4, spare.getSpareDescription());
-                ps.setString(5, spare.getCatalogueVersion());
-                ps.setString(6, spare.getProductEndOfServiceDate());
-                ps.setString(7, spare.getLastUpdate());
-                ps.setString(8, spare.getAddedToCatalogue());
-                ps.setString(9, spare.getRemovedFromCatalogue());
-                ps.setString(10, spare.getComments());
-                ps.setString(11, spare.getKeywords());
-                ps.setInt(12, spare.getArchived() != null && spare.getArchived() ? 1 : 0);
-                ps.setInt(13, spare.getCustomAdd() != null && spare.getCustomAdd() ? 1 : 0);
-                ps.setString(14, spare.getLastUpdatedBy());
-                ps.setString(15, spare.getSpareItem());
-            }
-
-            @Override
-            public int getBatchSize() {
-                return spares.size();
-            }
-        });
-
-        int totalRowsAffected = Arrays.stream(rowsAffected).sum();
-        logger.info("Updated {} spares in production database.", totalRowsAffected);
-        return totalRowsAffected;
-    }
-
-    @Override
-    public Map<String, Map<String, Set<String>>> getAllSpareRangeProductsBulk(boolean isArchived) {
-        int archived = isArchived ? 1 : 0;
-
-        String sql = """
-                SELECT 
-                    spare_item,
-                    pim_range,
-                    pim_product_family
-                FROM product_to_spares
-                WHERE archived = ?
-                  AND pim_range IS NOT NULL AND pim_range != ''
-                  AND pim_product_family IS NOT NULL AND pim_product_family != ''
-                ORDER BY spare_item, pim_range, pim_product_family
-                """;
-
-        Map<String, Map<String, Set<String>>> result = new LinkedHashMap<>();
-
-        jdbcTemplate.query(sql, rs -> {
-            String spare = rs.getString("spare_item");
-            String range = rs.getString("pim_range");
-            String product = rs.getString("pim_product_family");
-
-            // Safe navigation + initialization
-            result.computeIfAbsent(spare, k -> new LinkedHashMap<>())
-                    .computeIfAbsent(range, k -> new LinkedHashSet<>())
-                    .add(product);
-        }, archived);
-
-        return result;
-    }
-
-    @Override
-    public Set<String> getExistingSparesInSparesTable(Collection<String> spares, boolean isArchived) {
-        if (spares.isEmpty()) return Set.of();
-
-        int archived = isArchived ? 1 : 0;
-
-        String sql = """
-                SELECT spare_item 
-                FROM spares 
-                WHERE archived = ? 
-                  AND spare_item IN (""" + String.join(",", Collections.nCopies(spares.size(), "?")) + ")";
-
-        Set<String> existing = new HashSet<>();
-
-        jdbcTemplate.query(
-                sql,
-                ps -> {
-                    ps.setInt(1, archived);
-                    int idx = 2;
-                    for (String s : spares) {
-                        ps.setString(idx++, s);
-                    }
-                },
-                rs -> {
-                    existing.add(rs.getString("spare_item"));
-                }
-        );
-
-        return existing;
-    }
-
-    @Override
-    public void batchInsertConsolidated(Collection<ProductToSparesDTO> dtos) {
-        if (dtos == null || dtos.isEmpty()) return;
-
-        List<ProductToSparesDTO> list = (dtos instanceof List<?> l)
-                ? (List<ProductToSparesDTO>) l
-                : new ArrayList<>(dtos);
-
-        final String sql = """
-                INSERT INTO spares (
-                    pim, spare_item, replacement_item, standard_exchange_item,
-                    spare_description, catalogue_version, end_of_service_date,
-                    last_update, added_to_catalogue, removed_from_catalogue,
-                    comments, keywords, archived, custom_add, last_updated_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
-
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ProductToSparesDTO dto = list.get(i);
-
-                ps.setString(1, dto.getPimRange()); // see JSON note below
-                ps.setString(2, dto.getSpareItem());
-                ps.setString(3, dto.getReplacementItem());
-                ps.setString(4, dto.getStandardExchangeItem());
-                ps.setString(5, dto.getSpareDescription());
-                ps.setString(6, dto.getCatalogueVersion());
-                ps.setString(7, dto.getProductEndOfServiceDate());
-                ps.setString(8, dto.getLastUpdate());
-                ps.setString(9, dto.getAddedToCatalogue());
-                ps.setString(10, dto.getRemovedFromCatalogue());
-                ps.setString(11, dto.getComments());
-                ps.setString(12, dto.getKeywords());
-                ps.setBoolean(13, dto.isArchived());
-                ps.setBoolean(14, dto.isCustomAdd());
-                ps.setString(15, dto.getLastUpdatedBy());
-            }
-
-            @Override
-            public int getBatchSize() {
-                return list.size();
-            }
-        });
-    }
-
-
-//    @Override
-//    public void batchInsertConsolidated(List<ProductToSparesDTO> dtos) {
-//        if (dtos.isEmpty()) return;
-//
-//        String sql = """
-//        INSERT INTO spares (
-//            pim, spare_item, replacement_item, standard_exchange_item,
-//            spare_description, catalogue_version, end_of_service_date,
-//            last_update, added_to_catalogue, removed_from_catalogue,
-//            comments, keywords, archived, custom_add, last_updated_by
-//        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-//        """;
-//
-//        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-//            @Override
-//            public void setValues(PreparedStatement ps, int i) throws SQLException {
-//                ProductToSparesDTO dto = dtos.get(i);
-//                ps.setString(1,  dto.getPimRange());               // ← JSON here
-//                ps.setString(2,  dto.getSpareItem());
-//                ps.setString(3,  dto.getReplacementItem());
-//                ps.setString(4,  dto.getStandardExchangeItem());
-//                ps.setString(5,  dto.getSpareDescription());
-//                ps.setString(6,  dto.getCatalogueVersion());
-//                ps.setString(7,  dto.getProductEndOfServiceDate());
-//                ps.setString(8,  dto.getLastUpdate());
-//                ps.setString(9,  dto.getAddedToCatalogue());
-//                ps.setString(10, dto.getRemovedFromCatalogue());
-//                ps.setString(11, dto.getComments());
-//                ps.setString(12, dto.getKeywords());
-//                ps.setBoolean(13, dto.isArchived());
-//                ps.setBoolean(14, dto.isCustomAdd());
-//                ps.setString(15, dto.getLastUpdatedBy());
-//            }
-//
-//            @Override
-//            public int getBatchSize() {
-//                return dtos.size();
-//            }
-//        });
-//    }
-
-    @Override
-    public void batchUpdateConsolidated(List<ProductToSparesDTO> dtos) {
-        if (dtos.isEmpty()) return;
-
-        String sql = """
-                    UPDATE spares SET
-                        pim                    = ?,
-                        replacement_item       = ?,
-                        standard_exchange_item = ?,
-                        spare_description      = ?,
-                        catalogue_version      = ?,
-                        end_of_service_date    = ?,
-                        last_update            = ?,
-                        added_to_catalogue     = ?,
-                        removed_from_catalogue = ?,
-                        comments               = ?,
-                        keywords               = ?,
-                        custom_add             = ?,
-                        last_updated_by        = ?
-                    WHERE spare_item = ?
-                      AND archived   = ?
-                """;
-
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ProductToSparesDTO dto = dtos.get(i);
-                int idx = 1;
-                ps.setString(idx++, dto.getPimRange());               // JSON
-                ps.setString(idx++, dto.getReplacementItem());
-                ps.setString(idx++, dto.getStandardExchangeItem());
-                ps.setString(idx++, dto.getSpareDescription());
-                ps.setString(idx++, dto.getCatalogueVersion());
-                ps.setString(idx++, dto.getProductEndOfServiceDate());
-                ps.setString(idx++, dto.getLastUpdate());
-                ps.setString(idx++, dto.getAddedToCatalogue());
-                ps.setString(idx++, dto.getRemovedFromCatalogue());
-                ps.setString(idx++, dto.getComments());
-                ps.setString(idx++, dto.getKeywords());
-                ps.setBoolean(idx++, dto.isCustomAdd());
-                ps.setString(idx++, dto.getLastUpdatedBy());
-
-                // WHERE clause
-                ps.setString(idx++, dto.getSpareItem());
-                ps.setBoolean(idx++, dto.isArchived());
-            }
-
-            @Override
-            public int getBatchSize() {
-                return dtos.size();
-            }
-        });
-    }
-
 //    Default page_size is now 4096 bytes (good for most cases); no need to change unless testing shows benefit (e.g., 8192 or 65536 for very large rows).
 //    PRAGMA optimize at the end of import can help future queries (but not inserts): jdbcTemplate.execute("PRAGMA optimize;");
 //    WAL is preferred over MEMORY/OFF in recent advice (even for bulk) because it still allows decent recovery.
@@ -1149,6 +898,60 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
                     conn.setAutoCommit(originalAutoCommit);
                 } catch (SQLException ignored) {
                     // best effort
+                }
+            }
+
+            return null;
+        });
+    }
+
+    @Override
+    public void insertReplacementCrInBatch(final List<ReplacementCrDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        final String sql =
+                "INSERT INTO replacement_cr (item, replacement, comment, old_qty, new_qty) " +
+                        "VALUES (?, ?, ?, ?, ?)";
+
+        jdbcTemplate.execute((ConnectionCallback<Object>) conn -> {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try {
+                jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                    @Override
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        ReplacementCrDTO dto = dtos.get(i);
+
+                        ps.setString(1, dto.getItem());
+                        ps.setString(2, dto.getReplacement());
+                        ps.setString(3, dto.getComment());
+                        ps.setDouble(4, dto.getOldQty() != null ? dto.getOldQty() : 0.0);
+                        ps.setDouble(5, dto.getNewQty() != null ? dto.getNewQty() : 0.0);
+                    }
+
+                    @Override
+                    public int getBatchSize() {
+                        return dtos.size();
+                    }
+                });
+
+                conn.commit();
+
+            } catch (Exception e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                    // log if needed
+                }
+                throw new RuntimeException("Batch insert into replacement_cr failed", e);
+
+            } finally {
+                try {
+                    conn.setAutoCommit(originalAutoCommit);
+                } catch (SQLException ignored) {
                 }
             }
 

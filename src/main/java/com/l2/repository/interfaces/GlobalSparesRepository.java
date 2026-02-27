@@ -61,17 +61,15 @@ public interface GlobalSparesRepository {
 
     void insertSparePictures(List<SparePictureDTO> sparePictures);
 
-    int updateSpares(List<SparesDTO> spares);
+//    int updateSpares(List<SparesDTO> spares);
 
-    Map<String, Map<String, Set<String>>> getAllSpareRangeProductsBulk(boolean isArchived);
+//    Map<String, Map<String, Set<String>>> getAllSpareRangeProductsBulk(boolean isArchived);
 
-    Set<String> getExistingSparesInSparesTable(Collection<String> spares, boolean isArchived);
-
-    void batchInsertConsolidated(Collection<ProductToSparesDTO> dtos);
-
-    void batchUpdateConsolidated(List<ProductToSparesDTO> dtos);
+//    Set<String> getExistingSparesInSparesTable(Collection<String> spares, boolean isArchived);
 
     void changePRAGMASettinsForInsert();
 
     void insertProductToSparesInBatch(List<ProductToSparesDTO> dtos);
+
+    void insertReplacementCrInBatch(List<ReplacementCrDTO> dtos);
 }
