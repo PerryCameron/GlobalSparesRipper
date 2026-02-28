@@ -1,6 +1,7 @@
 package com.l2.repository.implementations;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.l2.dto.*;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import com.l2.repository.rowmappers.ProductToSparesRowMapper;
@@ -24,6 +25,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
@@ -836,6 +838,12 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
 //-- Optional: PRAGMA mmap_size = 1073741824;  -- 1 GB, if you have RAM
 
     @Override
+    public void indexProductToSpares() {
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_pts_archived_spare \n" +
+                "ON product_to_spares(archived, spare_item, pim_range);");
+    }
+
+    @Override
     public void insertProductToSparesInBatch(final List<ProductToSparesDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             return;
@@ -957,6 +965,190 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
 
             return null;
         });
+    }
+
+    // Grok version
+//    @Override
+//    public List<ProductToSparesDTO> getConsolidatedSpares(boolean isArchived) {
+//        String sql = """
+//        SELECT
+//            spare_item,
+//            replacement_item,
+//            standard_exchange_item,
+//            spare_description,
+//            catalogue_version,
+//            end_of_service_date,
+//            last_update,
+//            added_to_catalogue,
+//            removed_from_catalogue,
+//            comments,
+//            keywords,
+//            archived,
+//            custom_add,
+//            last_updated_by,
+//            MIN(id) AS source_id,
+//            json_group_array(
+//                json_object(
+//                    'range', pim_range,
+//                    'product_families', product_families
+//                )
+//            ) FILTER (WHERE product_families IS NOT NULL
+//            AND product_families != '[]')
+//            AND product_families != 'null') AS pim_json
+//        FROM (
+//            SELECT
+//                *,
+//                json_group_array(DISTINCT json(pim_product_family)) AS product_families
+//            FROM product_to_spares
+//            WHERE archived = ?
+//              AND spare_item IS NOT NULL
+//              AND trim(spare_item) != ''
+//            GROUP BY spare_item, pim_range
+//        ) sub
+//        GROUP BY spare_item
+//        ORDER BY spare_item
+//        """;
+//
+//        return jdbcTemplate.query(sql,
+//                ps -> ps.setInt(1, isArchived ? 1 : 0),
+//                (rs, rowNum) -> {
+//                    ProductToSparesDTO dto = new ProductToSparesDTO();
+//                    dto.setSpareItem(rs.getString("spare_item"));
+//                    dto.setReplacementItem(rs.getString("replacement_item"));
+//                    dto.setStandardExchangeItem(rs.getString("standard_exchange_item"));
+//                    dto.setSpareDescription(rs.getString("spare_description"));
+//                    dto.setCatalogueVersion(rs.getString("catalogue_version"));
+//                    dto.setProductEndOfServiceDate(rs.getString("end_of_service_date")); // note name mapping
+//                    dto.setLastUpdate(rs.getString("last_update"));
+//                    dto.setAddedToCatalogue(rs.getString("added_to_catalogue"));
+//                    dto.setRemovedFromCatalogue(rs.getString("removed_from_catalogue"));
+//                    dto.setComments(rs.getString("comments"));
+//                    dto.setKeywords(rs.getString("keywords"));
+//                    dto.setArchived(rs.getInt("archived") == 1);
+//                    dto.setCustomAdd(rs.getInt("custom_add") == 1);
+//                    dto.setLastUpdatedBy(rs.getString("last_updated_by"));
+//
+//                    // The aggregated PIM JSON – ready to be set
+//                    String pimJson = rs.getString("pim_json");
+//                    if (pimJson != null && !"null".equals(pimJson) && !"[]".equals(pimJson)) {
+//                        dto.setPimRange(pimJson);  // ← your JSON array string
+//                    } else {
+//                        dto.setPimRange("[]");
+//                    }
+//
+//                    // Optional: keep source id if you want to re-fetch the original row later
+//                    // int sourceId = rs.getInt("source_id");
+//
+//                    return dto;
+//                });
+//    }
+
+    @Override
+    public List<ProductToSparesDTO> getConsolidatedSpares(boolean isArchived) {
+        String sql = """
+        SELECT
+            pts.spare_item,
+            pts.pim_range,
+            GROUP_CONCAT(DISTINCT pts.pim_product_family) AS product_families,
+            MIN(pts.id) AS id,
+            pts.replacement_item,
+            pts.standard_exchange_item,
+            pts.spare_description,
+            pts.catalogue_version,
+            pts.end_of_service_date,
+            pts.last_update,
+            pts.added_to_catalogue,
+            pts.removed_from_catalogue,
+            pts.comments,
+            pts.keywords,
+            pts.archived,
+            pts.custom_add,
+            pts.last_updated_by
+        FROM product_to_spares pts
+        WHERE pts.archived = ?
+        GROUP BY pts.spare_item, pts.pim_range
+        ORDER BY pts.spare_item, pts.pim_range
+        """;
+
+        // Raw rows: spare_item -> [pim_range, product_families, ...metadata]
+        // We need to group by spare_item and accumulate pim entries
+        Map<String, ProductToSparesDTO> dtoMap = new LinkedHashMap<>();
+        Map<String, List<Map<String, Object>>> pimAccumulator = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql, rs -> {
+            String spareItem = rs.getString("spare_item");
+            String pimRange = rs.getString("pim_range");
+            String productFamiliesRaw = rs.getString("product_families");
+
+            List<String> productFamilies = productFamiliesRaw != null
+                    ? Arrays.asList(productFamiliesRaw.split(","))
+                    : List.of();
+
+            // Accumulate pim data
+            pimAccumulator.computeIfAbsent(spareItem, k -> new ArrayList<>());
+            if (!productFamilies.isEmpty()) {
+                Map<String, Object> rangeEntry = new HashMap<>();
+                rangeEntry.put("range", pimRange);
+                rangeEntry.put("product_families", productFamilies);
+                pimAccumulator.get(spareItem).add(rangeEntry);
+            }
+
+            // Only build the DTO once per spare_item (first row wins for metadata)
+            dtoMap.computeIfAbsent(spareItem, k -> {
+                ProductToSparesDTO dto = new ProductToSparesDTO();
+                try {
+                    dto.setId(rs.getInt("id"));
+                    dto.setSpareItem(spareItem);
+                    dto.setReplacementItem(rs.getString("replacement_item"));
+                    dto.setStandardExchangeItem(rs.getString("standard_exchange_item"));
+                    dto.setSpareDescription(rs.getString("spare_description"));
+                    dto.setCatalogueVersion(rs.getString("catalogue_version"));
+                    dto.setProductEndOfServiceDate(rs.getString("end_of_service_date"));
+                    dto.setLastUpdate(rs.getString("last_update"));
+                    dto.setAddedToCatalogue(rs.getString("added_to_catalogue"));
+                    dto.setRemovedFromCatalogue(rs.getString("removed_from_catalogue"));
+                    dto.setComments(rs.getString("comments"));
+                    dto.setKeywords(rs.getString("keywords"));
+                    dto.setArchived(rs.getInt("archived") == 1);
+                    dto.setCustomAdd(rs.getInt("custom_add") == 1);
+                    dto.setLastUpdatedBy(rs.getString("last_updated_by"));
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+                return dto;
+            });
+        }, isArchived ? 1 : 0);
+
+        // Now serialize pim JSON and set it on each DTO
+        ObjectMapper objectMapper = new ObjectMapper();
+        dtoMap.forEach((spareItem, dto) -> {
+            List<Map<String, Object>> pimData = pimAccumulator.getOrDefault(spareItem, List.of());
+            if (pimData.isEmpty()) {
+                logger.warn("No pim data for spare_item: {}", spareItem);
+                return;
+            }
+            try {
+                dto.setPimRange(objectMapper.writeValueAsString(pimData));
+                dto.setPimProductFamily("");
+            } catch (Exception e) {
+                logger.error("Error serializing JSON for spare_item: {}", spareItem, e);
+            }
+        });
+
+        return new ArrayList<>(dtoMap.values());
+    }
+
+    @Override
+    public Set<String> getExistingSpareItems(List<String> spareItems) {
+        if (spareItems.isEmpty()) return Set.of();
+
+        String placeholders = spareItems.stream()
+                .map(s -> "?")
+                .collect(Collectors.joining(", "));
+
+        String sql = "SELECT spare_item FROM spares WHERE spare_item IN (" + placeholders + ")";
+
+        return new HashSet<>(jdbcTemplate.queryForList(sql, String.class, spareItems.toArray()));
     }
 }
 
