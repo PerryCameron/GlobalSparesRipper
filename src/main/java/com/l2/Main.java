@@ -53,6 +53,7 @@ public class Main extends Application {
                 ImageResources.GSLOGO64,
                 ImageResources.GSLOGO80,
                 ImageResources.GSLOGO96,
+                ImageResources.GSLOGO128,
                 ImageResources.GSLOGO256
         );
         primaryStage.getScene().getStylesheets().add(

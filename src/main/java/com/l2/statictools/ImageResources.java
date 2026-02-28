@@ -17,6 +17,8 @@ public class ImageResources {
     public static final Image GSLOGO96;
     public static final Image GSLOGO128;
     public static final Image GSLOGO256;
+    public static final Image YES;
+    public static final Image NO;
 
 
     static {
@@ -69,7 +71,14 @@ public class ImageResources {
                     ImageResources.class.getResourceAsStream("/images/GSRipper-256.png"),
                     "Failed to load resource: /images/GSRipper-256.png"
             ));
-
+            YES = new Image(Objects.requireNonNull(
+                    ImageResources.class.getResourceAsStream("/images/yes-16.png"),
+                    "Failed to load resource: /images/yes-16.png"
+            ));
+            NO = new Image(Objects.requireNonNull(
+                    ImageResources.class.getResourceAsStream("/images/no-16.png"),
+                    "Failed to load resource: /images/no-16.png"
+            ));
 
         } catch (NullPointerException e) {
             throw new IllegalStateException("Failed to initialize ImageResources due to missing resource", e);
