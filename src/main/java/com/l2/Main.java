@@ -4,6 +4,7 @@ import com.l2.mvci.main.MainController;
 import com.l2.statictools.ImageResources;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,20 @@ public class Main extends Application {
         primaryStage.setResizable(true);
         primaryStage.setScene(new Scene(controller.getView()));
         primaryStage.setTitle("Global Spares Ripper");
-        primaryStage.getIcons().add(ImageResources.GSLOGO64);
+        primaryStage.getIcons().addAll(
+                ImageResources.GSLOGO64,
+                ImageResources.GSLOGO16,
+                ImageResources.GSLOGO20,
+                ImageResources.GSLOGO24,
+                ImageResources.GSLOGO30,
+                ImageResources.GSLOGO32,
+                ImageResources.GSLOGO36,
+                ImageResources.GSLOGO48,
+                ImageResources.GSLOGO64,
+                ImageResources.GSLOGO80,
+                ImageResources.GSLOGO96,
+                ImageResources.GSLOGO256
+        );
         primaryStage.getScene().getStylesheets().add(
                 getClass().getResource("/css/light.css").toExternalForm()
         );

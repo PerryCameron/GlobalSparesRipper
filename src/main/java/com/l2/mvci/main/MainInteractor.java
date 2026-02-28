@@ -149,11 +149,7 @@ public class MainInteractor {
         model.getProgressBar().setProgress(0);
         model.getTa().appendText("Conversion started...\n");
         globalSparesRepository.changePRAGMASettinsForInsert();
-
-//        ProductToSparesDTO dto = new ProductToSparesDTO(false, false);  // shared, but mutated per phase
-//        ReplacementCrDTO replacementCrDTO = new ReplacementCrDTO();
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
-        ObjectMapper objectMapper = new ObjectMapper();
 
         // Start the chain
         CompletableFuture<Void> chain = CompletableFuture.runAsync(() -> {
@@ -210,7 +206,7 @@ public class MainInteractor {
                 () -> {
                     // increases speed by 3 seconds but increases size
                     //globalSparesRepository.indexProductToSpares();
-                    consolidateWithJSON(false, editedSpares, objectMapper);
+                    consolidateWithJSON(false, editedSpares);
                 }
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
@@ -219,7 +215,7 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 "Consolidating Archived Product to Spares",
                 () -> {
-                    consolidateWithJSON(true, editedSpares, objectMapper);
+                    consolidateWithJSON(true, editedSpares);
                 }
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
@@ -262,8 +258,7 @@ public class MainInteractor {
     //Claud's version
     public void consolidateWithJSON(
             boolean isArchived,
-            List<ProductToSparesDTO> editedSpares,
-            ObjectMapper objectMapper) {
+            List<ProductToSparesDTO> editedSpares) {
 
         List<ProductToSparesDTO> consolidated = globalSparesRepository.getConsolidatedSpares(isArchived);
 

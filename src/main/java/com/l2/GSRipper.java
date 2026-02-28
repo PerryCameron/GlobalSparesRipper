@@ -27,7 +27,7 @@ public class GSRipper {
             // creates the database and puts it in database folder
             GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
             // extracts information from xlsx file and updates database with extracted information
-            // ExcelRipper.extractWorkbookToSql(workbook);
+            ExcelRipper.extractWorkbookToSql(workbook);
             // clean up unused database components
             ExcelRipper.cleanUpDatabase();
         } catch (IOException e) {
