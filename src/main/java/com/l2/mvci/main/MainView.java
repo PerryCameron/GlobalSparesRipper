@@ -1,19 +1,21 @@
 package com.l2.mvci.main;
 
+import com.l2.dto.TaskItemDTO;
+import com.l2.statictools.ImageResources;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Builder;
+import javafx.beans.binding.Bindings;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 public class MainView implements Builder<Region> {
@@ -32,7 +34,7 @@ public class MainView implements Builder<Region> {
         model.viewStatusProperty().addListener((obs, oldStatus, newStatus) -> {
             model.rootProperty().get().setCenter(null);
             switch (newStatus) {
-                case XFS_LOADED   -> {
+                case XFS_LOADED -> {
                     model.rootProperty().get().setCenter(createStatusArea());
                 }
                 case LOADING_XFS -> {
@@ -51,8 +53,9 @@ public class MainView implements Builder<Region> {
                 case CONVERSION_DONE -> {
                     model.buttonProperty().get().setVisible(true);
                 }
-                default      -> {
-                    model.rootProperty().get().setCenter(dropArea()); }
+                default -> {
+                    model.rootProperty().get().setCenter(dropArea());
+                }
             }
         });
         // initial state
@@ -60,28 +63,64 @@ public class MainView implements Builder<Region> {
         return model.rootProperty().get();
     }
 
-
     private Node createConvertScreen() {
         VBox root = new VBox(8);
         root.setPadding(new Insets(50, 20, 10, 20));
         root.setFillWidth(true);
         model.buttonProperty().get().setVisible(false);
-        model.buttonProperty().get().setOnMouseClicked(event -> {
-            System.exit(0);
-        });
+        model.buttonProperty().get().setOnMouseClicked(event -> System.exit(0));
+
         ProgressBar pb = model.getProgressBar();
-        TextArea ta = model.getTa();
-        ta.setEditable(false);
-        pb.setPrefHeight(40);   // make it taller
+        pb.setPrefHeight(40);
         pb.setMinHeight(40);
         pb.setMaxHeight(40);
-        pb.setMaxWidth(Double.MAX_VALUE);    // the bar is all the way up against the left
+        pb.setMaxWidth(Double.MAX_VALUE);
 
-        root.getChildren().add(pb);
-        root.getChildren().add(ta);
-        root.getChildren().add(model.buttonProperty().get());
-        // VBox.setVgrow(pb, Priority.NEVER);
+        // --- Task Table ---
+        TableView<TaskItemDTO> taskTable = new TableView<>(model.getTaskList());
+        taskTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        taskTable.setSelectionModel(null); // no row selection needed
+        taskTable.setFixedCellSize(36);
+        taskTable.setMaxWidth(Double.MAX_VALUE);
 
+        // Left column: task name
+        TableColumn<TaskItemDTO, String> nameCol = new TableColumn<>("Task");
+        nameCol.setCellValueFactory(data -> data.getValue().taskNameProperty());
+        nameCol.setStyle("-fx-font-size: 13px;");
+
+        // Right column: checkmark image (only shown when complete)
+        TableColumn<TaskItemDTO, Boolean> doneCol = new TableColumn<>("Done");
+        doneCol.setCellValueFactory(data -> data.getValue().completedProperty());
+        doneCol.setCellFactory(col -> new TableCell<>() {
+            private final ImageView checkmark = new ImageView(ImageResources.YES);
+
+            {
+                checkmark.setFitHeight(22);
+                checkmark.setFitWidth(22);
+                checkmark.setPreserveRatio(true);
+                setAlignment(Pos.CENTER);
+            }
+
+            @Override
+            protected void updateItem(Boolean done, boolean empty) {
+                super.updateItem(done, empty);
+                setGraphic((done != null && done && !empty) ? checkmark : null);
+            }
+        });
+        doneCol.setMaxWidth(80);
+        doneCol.setMinWidth(80);
+
+        taskTable.getColumns().addAll(Arrays.asList(nameCol, doneCol));
+
+        // Bind table height to row count so there's no empty rows / scrollbar
+        taskTable.prefHeightProperty().bind(
+                Bindings.size(model.getTaskList())
+                        .multiply(taskTable.getFixedCellSize())
+                        .add(30) // header height
+        ); // Cannot resolve symbol 'Bindings'
+
+        root.getChildren().addAll(pb, taskTable, model.buttonProperty().get());
+        VBox.setVgrow(taskTable, Priority.ALWAYS);
         return root;
     }
 
@@ -91,16 +130,16 @@ public class MainView implements Builder<Region> {
         Label errorLabel = new Label(model.getErrorMessage());
         Button okButton = new Button("OK");
         errorLabel.setStyle("""
-            -fx-font-size: 18;
-            -fx-text-fill: #020202;
-            -fx-padding: 60;
-            """);
+                -fx-font-size: 18;
+                -fx-text-fill: #020202;
+                -fx-padding: 60;
+                """);
         Label label = new Label("Error Occurred");
         label.setStyle("""
-            -fx-font-size: 28;
-            -fx-text-fill: #f40606;
-            -fx-padding: 60;
-            """);
+                -fx-font-size: 28;
+                -fx-text-fill: #f40606;
+                -fx-padding: 60;
+                """);
         okButton.setOnAction(e -> {
             model.rootProperty().get().setCenter(dropArea());
         });
@@ -114,10 +153,10 @@ public class MainView implements Builder<Region> {
         root.setAlignment(Pos.TOP_CENTER);
         Label label = new Label(labelText);
         label.setStyle("""
-            -fx-font-size: 18;
-            -fx-text-fill: #444;
-            -fx-padding: 60;
-            """);
+                -fx-font-size: 18;
+                -fx-text-fill: #444;
+                -fx-padding: 60;
+                """);
         root.getChildren().add(label);
         return root;
     }
@@ -128,10 +167,10 @@ public class MainView implements Builder<Region> {
         model.labelProperty().set(new Label("Drag and drop Global Spares Catalogue.xlsx here"));
         // ── Drop zone ───────────────────────────────────────────────
         model.labelProperty().get().setStyle("""
-            -fx-font-size: 18;
-            -fx-text-fill: #444;
-            -fx-padding: 60;
-            """);
+                -fx-font-size: 18;
+                -fx-text-fill: #444;
+                -fx-padding: 60;
+                """);
         model.labelProperty().get().setTextAlignment(TextAlignment.CENTER);
         model.labelProperty().get().setAlignment(Pos.CENTER);
 

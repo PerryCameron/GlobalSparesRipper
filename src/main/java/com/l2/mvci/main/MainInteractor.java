@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.l2.*;
 import com.l2.dto.ProductToSparesDTO;
 import com.l2.dto.ReplacementCrDTO;
+import com.l2.dto.TaskItemDTO;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import javafx.application.Platform;
@@ -58,11 +59,12 @@ public class MainInteractor {
 
         }, backgroundExec).thenRunAsync(() -> {
             // Runs after phaseLogic finishes (success path)
-            model.getTa().appendText("✅ Completed\n");
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
             // If phaseLogic throws → caught here
             Platform.runLater(() -> {
-                model.getTa().appendText("❌ Failed: " + ex.getMessage() + "\n");
+                model.setErrorMessage(ex.getMessage());
+                model.viewStatusProperty().setValue(ViewStatus.ERROR);
             });
             throw new CompletionException(ex);  // propagate to chain
         }, fxExec);
@@ -147,7 +149,15 @@ public class MainInteractor {
     public void convertToSql() {
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
-        model.getTa().appendText("Conversion started...\n");
+        model.getTaskList().addAll(
+                new TaskItemDTO("Adding Product to Spares"),
+                new TaskItemDTO("Adding Archived Product to Spares"),
+                new TaskItemDTO("Adding Replacement CRs"),
+                new TaskItemDTO("Adding Uniflair Cross Reference"),
+                new TaskItemDTO("Consolidating Product to Spares"),
+                new TaskItemDTO("Consolidating Archived Product to Spares"),
+                new TaskItemDTO("Vacuuming database")
+        );
         globalSparesRepository.changePRAGMASettinsForInsert();
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
@@ -165,6 +175,7 @@ public class MainInteractor {
                         extractProductToSpares(sheet, false, model.getProductToSparesTotal())
                 )
         ), backgroundExec);
+
         // ──────────────────────────────────────────────────────
         // Phase 2: Archived Product to Spares
         // ──────────────────────────────────────────────────────

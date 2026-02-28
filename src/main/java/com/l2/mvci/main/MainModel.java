@@ -1,7 +1,10 @@
 package com.l2.mvci.main;
 
+import com.l2.dto.TaskItemDTO;
 import com.l2.mvci.load.LoadingController;
 import javafx.beans.property.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -12,6 +15,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class MainModel {
     private final StringProperty droppedFilePath = new SimpleStringProperty("");
     private final StringProperty errorMessage = new SimpleStringProperty("");
+    private final IntegerProperty element = new SimpleIntegerProperty(0);
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
     private final int[] totalWork = new int[] { 0,0,0,0,0,0 };
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
@@ -22,6 +26,8 @@ public class MainModel {
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
+    private final ObservableList<TaskItemDTO> taskList = FXCollections.observableArrayList();
+    public ObservableList<TaskItemDTO> getTaskList() { return taskList; }
 
     public String getDroppedFilePath() {
         return droppedFilePath.get();
@@ -149,5 +155,18 @@ public class MainModel {
 
     public ObjectProperty<Button> buttonProperty() {
         return button;
+    }
+
+    public int getElement() {
+        return element.get();
+    }
+
+    public IntegerProperty elementProperty() {
+        return element;
+    }
+
+    public int incrementElement() {
+        element.set(element.get() + 1);
+        return element.get() - 1;
     }
 }
