@@ -5,11 +5,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-public class TaskItemDTO {
+public class TaskItem {
     private final StringProperty taskName = new SimpleStringProperty();
     private final BooleanProperty completed = new SimpleBooleanProperty(false);
 
-    public TaskItemDTO(String name) {
+    public TaskItem(String name) {
         taskName.set(name);
     }
 

@@ -1,10 +1,9 @@
 package com.l2.mvci.main;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.l2.*;
 import com.l2.dto.ProductToSparesDTO;
 import com.l2.dto.ReplacementCrDTO;
-import com.l2.dto.TaskItemDTO;
+import com.l2.dto.TaskItem;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import javafx.application.Platform;
@@ -61,7 +60,7 @@ public class MainInteractor {
             // Runs after phaseLogic finishes (success path)
             model.getTaskList().get(model.incrementElement()).setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
-            // If phaseLogic throws → caught here
+            logger.error(ex.getMessage(), ex);
             Platform.runLater(() -> {
                 model.setErrorMessage(ex.getMessage());
                 model.viewStatusProperty().setValue(ViewStatus.ERROR);
@@ -73,7 +72,7 @@ public class MainInteractor {
     public void loadWorkbookFromDroppedFile() {
         String path = model.getDroppedFilePath();
         if (path == null || path.isBlank()) {
-            System.err.println("No file path in model");
+            logger.error("No file path in model");
             return;
         }
         model.viewStatusProperty().setValue(ViewStatus.LOADING_XFS);
@@ -140,7 +139,6 @@ public class MainInteractor {
         thread.start();
     }
 
-
     public void setLoadingController() {
         model.getLoadingController().getStage().setScene(new Scene(model.getLoadingController().getView(), Color.TRANSPARENT));
         model.getLoadingController().getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
@@ -150,13 +148,13 @@ public class MainInteractor {
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
         model.getTaskList().addAll(
-                new TaskItemDTO("Adding Product to Spares"),
-                new TaskItemDTO("Adding Archived Product to Spares"),
-                new TaskItemDTO("Adding Replacement CRs"),
-                new TaskItemDTO("Adding Uniflair Cross Reference"),
-                new TaskItemDTO("Consolidating Product to Spares"),
-                new TaskItemDTO("Consolidating Archived Product to Spares"),
-                new TaskItemDTO("Vacuuming database")
+                new TaskItem("Adding Product to Spares"),
+                new TaskItem("Adding Archived Product to Spares"),
+                new TaskItem("Adding Replacement CRs"),
+                new TaskItem("Adding Uniflair Cross Reference"),
+                new TaskItem("Consolidating Product to Spares"),
+                new TaskItem("Consolidating Archived Product to Spares"),
+                new TaskItem("Vacuuming database")
         );
         globalSparesRepository.changePRAGMASettinsForInsert();
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
@@ -243,10 +241,12 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         chain.whenCompleteAsync((result, ex) -> {
             long end = System.currentTimeMillis();
-            logger.info("Time taken: {} ms", end - start);
+            String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
+            logger.info("Time taken: {} ms", timeTaken);
+            model.statusMessageProperty().set(timeTaken);
             if (ex == null) {
                 model.getTa().appendText("All phases completed successfully ✓\n");
-                model.viewStatusProperty().set(ViewStatus.CONVERSION_DONE);
+                //model.viewStatusProperty().set(ViewStatus.CONVERSION_DONE);
                 model.getProgressBar().setProgress(1.0);
             } else {
                 model.getTa().appendText("❌ Conversion failed: " + ex.getMessage() + "\n");
@@ -256,6 +256,16 @@ public class MainInteractor {
             }
         }, fxExec);
     }
+
+
+    public static String millisecondsToMinutesSeconds(long milliseconds) {
+        long totalSeconds = milliseconds / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
 
     // helper to return specified sheet
     private Optional<Sheet> getSheet(String sheetName) {
@@ -454,5 +464,45 @@ public class MainInteractor {
     public static boolean cleanUpDatabase() {
         globalSparesRepository.dropProductToSparesAndVacuum();
         return true;
+    }
+
+    public int[] compareSparesTables() {
+        // Get spare_item + archived from both databases
+        String sql = "SELECT spare_item, archived FROM spares";
+
+        Map<String, Integer> productionSpares = new HashMap<>();
+        Map<String, Integer> globalSpares = new HashMap<>();
+
+        productionJdbcTemplate.query(sql, rs -> {
+            productionSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
+        });
+
+        globalSparesJdbcTemplate.query(sql, rs -> {
+            globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
+        });
+
+        // Added: in global but not in production
+        int added = (int) globalSpares.keySet().stream()
+                .filter(item -> !productionSpares.containsKey(item))
+                .count();
+
+        // Removed: in production but not in global
+        int removed = (int) productionSpares.keySet().stream()
+                .filter(item -> !globalSpares.containsKey(item))
+                .count();
+
+        // Archived: exists in both, was NOT archived in production (0), now IS archived in global (1)
+        int archived = (int) globalSpares.entrySet().stream()
+                .filter(e -> productionSpares.containsKey(e.getKey()))
+                .filter(e -> productionSpares.get(e.getKey()) == 0 && e.getValue() == 1)
+                .count();
+
+        // Unarchived: exists in both, WAS archived in production (1), now NOT archived in global (0)
+        int unarchived = (int) globalSpares.entrySet().stream()
+                .filter(e -> productionSpares.containsKey(e.getKey()))
+                .filter(e -> productionSpares.get(e.getKey()) == 1 && e.getValue() == 0)
+                .count();
+
+        return new int[]{ added, removed, archived, unarchived };
     }
 }

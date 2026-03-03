@@ -1,6 +1,6 @@
 package com.l2.mvci.main;
 
-import com.l2.dto.TaskItemDTO;
+import com.l2.dto.TaskItem;
 import com.l2.statictools.ImageResources;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -44,6 +44,7 @@ public class MainView implements Builder<Region> {
                     model.rootProperty().get().setCenter(createLabledProcess("Calculating Conversion time"));
                 }
                 case CONVERT_TO_SQL -> {
+                    com.l2.Main.primaryStage.setHeight(600);
                     model.rootProperty().get().setCenter(createConvertScreen());
                     action.accept(MainMessage.CONVERT_TO_SQL);
                 }
@@ -58,9 +59,18 @@ public class MainView implements Builder<Region> {
                 }
             }
         });
-        // initial state
+        model.rootProperty().get().setBottom(statusBar());
         model.rootProperty().get().setCenter(dropArea());
         return model.rootProperty().get();
+    }
+
+    private Node statusBar() {
+        HBox statusBar = new HBox();
+        statusBar.setPadding(new Insets(2, 5, 2, 10));
+        Label statusLabel = new Label("");
+        statusLabel.textProperty().bind(model.statusMessageProperty());
+        statusBar.getChildren().add(statusLabel);
+        return  statusBar;
     }
 
     private Node createConvertScreen() {
@@ -77,19 +87,19 @@ public class MainView implements Builder<Region> {
         pb.setMaxWidth(Double.MAX_VALUE);
 
         // --- Task Table ---
-        TableView<TaskItemDTO> taskTable = new TableView<>(model.getTaskList());
+        TableView<TaskItem> taskTable = new TableView<>(model.getTaskList());
         taskTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         taskTable.setSelectionModel(null); // no row selection needed
         taskTable.setFixedCellSize(36);
         taskTable.setMaxWidth(Double.MAX_VALUE);
 
         // Left column: task name
-        TableColumn<TaskItemDTO, String> nameCol = new TableColumn<>("Task");
+        TableColumn<TaskItem, String> nameCol = new TableColumn<>("Task");
         nameCol.setCellValueFactory(data -> data.getValue().taskNameProperty());
         nameCol.setStyle("-fx-font-size: 13px;");
 
         // Right column: checkmark image (only shown when complete)
-        TableColumn<TaskItemDTO, Boolean> doneCol = new TableColumn<>("Done");
+        TableColumn<TaskItem, Boolean> doneCol = new TableColumn<>("Done");
         doneCol.setCellValueFactory(data -> data.getValue().completedProperty());
         doneCol.setCellFactory(col -> new TableCell<>() {
             private final ImageView checkmark = new ImageView(ImageResources.YES);
@@ -146,7 +156,6 @@ public class MainView implements Builder<Region> {
         vBox.getChildren().addAll(label, errorLabel, okButton);
         return vBox;
     }
-
 
     private Node createLabledProcess(String labelText) {
         VBox root = new VBox();
