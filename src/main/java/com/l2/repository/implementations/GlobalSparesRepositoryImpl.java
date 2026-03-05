@@ -1150,6 +1150,24 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
 
         return new HashSet<>(jdbcTemplate.queryForList(sql, String.class, spareItems.toArray()));
     }
+
+    @Override
+    public Map<String, Integer> countArchived() {
+        Map<String, Integer> globalSpares = new HashMap<>();
+        String sql = "SELECT spare_item, archived FROM spares";
+        jdbcTemplate.query(sql, rs -> {
+            globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
+        });
+        return globalSpares;
+    }
+
+    @Override
+    public Map<String, SparesDTO> getAllBySpareItem() {
+        String sql = "SELECT * FROM spares";
+        return jdbcTemplate.query(sql, new SparesRowMapper())
+                .stream()
+                .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
+    }
 }
 
 

@@ -6,5 +6,5 @@ public enum ViewStatus {
     PREP_TO_CONVERT,
     XFS_LOADED,
     CONVERSION_DONE,
-    ERROR
+    VIEW_CHANGES, ERROR
 }

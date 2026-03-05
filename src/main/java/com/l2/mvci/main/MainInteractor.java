@@ -1,11 +1,11 @@
 package com.l2.mvci.main;
 
 import com.l2.*;
-import com.l2.dto.ProductToSparesDTO;
-import com.l2.dto.ReplacementCrDTO;
-import com.l2.dto.TaskItem;
+import com.l2.dto.*;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
+import com.l2.repository.implementations.OldRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
+import com.l2.repository.interfaces.OldRepository;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
@@ -30,6 +30,7 @@ public class MainInteractor {
     private final MainModel model;
     private static final Logger logger = LoggerFactory.getLogger(MainInteractor.class);
     private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
+    private static final OldRepository oldRepository = new OldRepositoryImpl();
 
     public MainInteractor(MainModel model) {
         this.model = model;
@@ -58,6 +59,15 @@ public class MainInteractor {
 
         }, backgroundExec).thenRunAsync(() -> {
             // Runs after phaseLogic finishes (success path)
+            // for testing
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            // normal
             model.getTaskList().get(model.incrementElement()).setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
             logger.error(ex.getMessage(), ex);
@@ -116,11 +126,11 @@ public class MainInteractor {
         Task<XSSFWorkbook> createDataBaseTask = new Task<>() {
             @Override
             protected XSSFWorkbook call() {
-                if (AppFileTools.moveExistingGlobalSparesDb())
+//                if (AppFileTools.moveExistingGlobalSparesDb())
                     logger.info("Existing Global Spares Catalogue found and moved for later comparison");
-                else logger.info("There is no existing Global Spares Catalogue found");
+//                else logger.info("There is no existing Global Spares Catalogue found");
                 // if it was created then copy it to the old dir
-                GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
+//                GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
                 model.setTotalWork(ExcelRipper.estimateTotalWork(model.getWorkbook()));
                 logger.info(model.totalWorkToString());
                 return null;
@@ -154,7 +164,8 @@ public class MainInteractor {
                 new TaskItem("Adding Uniflair Cross Reference"),
                 new TaskItem("Consolidating Product to Spares"),
                 new TaskItem("Consolidating Archived Product to Spares"),
-                new TaskItem("Vacuuming database")
+                new TaskItem("Vacuuming database"),
+                new TaskItem("Calculating Changes")
         );
         globalSparesRepository.changePRAGMASettinsForInsert();
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
@@ -167,73 +178,83 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         // Phase 1: Active Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Product to Spares",
-                () -> getSheet("Product to Spares").ifPresent(sheet ->
-                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
-                )
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Product to Spares",
+//                () -> getSheet("Product to Spares").ifPresent(sheet ->
+//                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
+//                )
+//        ), backgroundExec);
 
         // ──────────────────────────────────────────────────────
         // Phase 2: Archived Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Archived Product to Spares",
-                () -> {
-                    getSheet("Archived Product to Spares").ifPresent(sheet ->
-                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
-                    );
-                }
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Archived Product to Spares",
+//                () -> {
+//                    getSheet("Archived Product to Spares").ifPresent(sheet ->
+//                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
+//                    );
+//                }
+//        ), backgroundExec);
         //──────────────────────────────────────────────────────
         // Phase 3 Replacement CRs
         //──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Replacement CRs",
-                () -> {
-                    getSheet("Replacement CRs").ifPresent(sheet ->
-                            extractReplacementCr(sheet, model.getReplacementCRs())
-                    );
-                }
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Replacement CRs",
+//                () -> {
+//                    getSheet("Replacement CRs").ifPresent(sheet ->
+//                            extractReplacementCr(sheet, model.getReplacementCRs())
+//                    );
+//                }
+//        ), backgroundExec);
         //──────────────────────────────────────────────────────
         // Phase 4 Uniflair Cross Reference
         //──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Uniflair Cross Reference",
-                () -> {
-                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-                            extractReplacementCr(sheet, model.getUniflairCrossReference())
-                    );
-                }
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Uniflair Cross Reference",
+//                () -> {
+//                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+//                            extractReplacementCr(sheet, model.getUniflairCrossReference())
+//                    );
+//                }
+//        ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 5 Consolidating Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Consolidating Product to Spares",
-                () -> {
-                    // increases speed by 3 seconds but increases size
-                    //globalSparesRepository.indexProductToSpares();
-                    consolidateWithJSON(false, editedSpares);
-                }
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Consolidating Product to Spares",
+//                () -> {
+//                    // increases speed by 3 seconds but increases size
+//                    //globalSparesRepository.indexProductToSpares();
+//                    consolidateWithJSON(false, editedSpares);
+//                }
+//        ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 6 Consolidating Archived Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Consolidating Archived Product to Spares",
-                () -> {
-                    consolidateWithJSON(true, editedSpares);
-                }
-        ), backgroundExec);
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Consolidating Archived Product to Spares",
+//                () -> {
+//                    consolidateWithJSON(true, editedSpares);
+//                }
+//        ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 7 Vacuum Database
         // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Vacuuming database",
+//                () -> {
+//                    cleanUpDatabase();
+//                }
+//        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Counting our changes
+        // ──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(
-                "Vacuuming database",
+                "Counting Changes",
                 () -> {
-                    cleanUpDatabase();
+                    model.spareComparisonResultProperty().setValue(compareSparesTables());
+                    model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
                 }
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
@@ -466,43 +487,51 @@ public class MainInteractor {
         return true;
     }
 
-    public int[] compareSparesTables() {
-        // Get spare_item + archived from both databases
-        String sql = "SELECT spare_item, archived FROM spares";
 
-        Map<String, Integer> productionSpares = new HashMap<>();
-        Map<String, Integer> globalSpares = new HashMap<>();
+    public SpareComparisonResult compareSparesTables() {
 
-        productionJdbcTemplate.query(sql, rs -> {
-            productionSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
-        });
+        Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
+        Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
 
-        globalSparesJdbcTemplate.query(sql, rs -> {
-            globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
-        });
-
-        // Added: in global but not in production
-        int added = (int) globalSpares.keySet().stream()
-                .filter(item -> !productionSpares.containsKey(item))
+        int added = (int) newSpares.keySet().stream()
+                .filter(item -> !oldSpares.containsKey(item))
                 .count();
 
-        // Removed: in production but not in global
-        int removed = (int) productionSpares.keySet().stream()
-                .filter(item -> !globalSpares.containsKey(item))
+        int removed = (int) oldSpares.keySet().stream()
+                .filter(item -> !newSpares.containsKey(item))
                 .count();
 
-        // Archived: exists in both, was NOT archived in production (0), now IS archived in global (1)
-        int archived = (int) globalSpares.entrySet().stream()
-                .filter(e -> productionSpares.containsKey(e.getKey()))
-                .filter(e -> productionSpares.get(e.getKey()) == 0 && e.getValue() == 1)
-                .count();
+        int archived = 0, unarchived = 0;
+        int pimChanges = 0, replacementItemChanges = 0, standardExchangeItemChanges = 0;
+        int spareDescriptionChanges = 0, endOfServiceDateChanges = 0, lastUpdateChanges = 0;
+        int addedToCatalogueChanges = 0, removedFromCatalogueChanges = 0, commentsChanges = 0;
 
-        // Unarchived: exists in both, WAS archived in production (1), now NOT archived in global (0)
-        int unarchived = (int) globalSpares.entrySet().stream()
-                .filter(e -> productionSpares.containsKey(e.getKey()))
-                .filter(e -> productionSpares.get(e.getKey()) == 1 && e.getValue() == 0)
-                .count();
+        for (Map.Entry<String, SparesDTO> entry : newSpares.entrySet()) {
+            String key = entry.getKey();
+            if (!oldSpares.containsKey(key)) continue;
 
-        return new int[]{ added, removed, archived, unarchived };
+            SparesDTO newDto = entry.getValue();
+            SparesDTO oldDto = oldSpares.get(key);
+
+            if (!oldDto.getArchived() && newDto.getArchived())  archived++;
+            if (oldDto.getArchived()  && !newDto.getArchived()) unarchived++;
+
+            if (!Objects.equals(oldDto.getPim(),                     newDto.getPim()))                     pimChanges++;
+            if (!Objects.equals(oldDto.getReplacementItem(),         newDto.getReplacementItem()))         replacementItemChanges++;
+            if (!Objects.equals(oldDto.getStandardExchangeItem(),    newDto.getStandardExchangeItem()))    standardExchangeItemChanges++;
+            if (!Objects.equals(oldDto.getSpareDescription(),        newDto.getSpareDescription()))        spareDescriptionChanges++;
+            if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate())) endOfServiceDateChanges++;
+            if (!Objects.equals(oldDto.getLastUpdate(),              newDto.getLastUpdate()))              lastUpdateChanges++;
+            if (!Objects.equals(oldDto.getAddedToCatalogue(),        newDto.getAddedToCatalogue()))        addedToCatalogueChanges++;
+            if (!Objects.equals(oldDto.getRemovedFromCatalogue(),    newDto.getRemovedFromCatalogue()))    removedFromCatalogueChanges++;
+            if (!Objects.equals(oldDto.getComments(),                newDto.getComments()))                commentsChanges++;
+        }
+
+        return new SpareComparisonResult(
+                added, removed, archived, unarchived,
+                pimChanges, replacementItemChanges, standardExchangeItemChanges,
+                spareDescriptionChanges, endOfServiceDateChanges, lastUpdateChanges,
+                addedToCatalogueChanges, removedFromCatalogueChanges, commentsChanges
+        );
     }
 }

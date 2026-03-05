@@ -74,4 +74,7 @@ public interface GlobalSparesRepository {
 
     Set<String> getExistingSpareItems(List<String> spareItems);
 
+    Map<String, Integer> countArchived();
+
+    Map<String, SparesDTO> getAllBySpareItem();
 }

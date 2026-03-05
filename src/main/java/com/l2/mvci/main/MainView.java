@@ -51,6 +51,10 @@ public class MainView implements Builder<Region> {
                 case ERROR -> {
                     model.rootProperty().get().setCenter(createErrorMessage());
                 }
+                case VIEW_CHANGES -> {
+                    // we need to add our call for UI change here.
+                }
+
                 case CONVERSION_DONE -> {
                     model.buttonProperty().get().setVisible(true);
                 }
