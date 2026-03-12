@@ -248,22 +248,14 @@ public class MainInteractor {
 //                }
 //        ), backgroundExec);
         // ──────────────────────────────────────────────────────
-        // Counting our changes
-        // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(
-                "Counting Changes",
-                () -> {
-                    model.spareComparisonResultProperty().setValue(compareSparesTables());
-                    model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
-                }
-        ), backgroundExec);
-        // ──────────────────────────────────────────────────────
         // Final completion / error handling
         // ──────────────────────────────────────────────────────
         chain.whenCompleteAsync((result, ex) -> {
             long end = System.currentTimeMillis();
             String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
             logger.info("Time taken: {} ms", timeTaken);
+            model.spareComparisonResultProperty().setValue(compareSparesTables());
+            model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
             model.statusMessageProperty().set(timeTaken);
             if (ex == null) {
                 model.getTa().appendText("All phases completed successfully ✓\n");

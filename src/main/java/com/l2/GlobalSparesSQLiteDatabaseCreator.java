@@ -74,10 +74,20 @@ public class GlobalSparesSQLiteDatabaseCreator {
                                                 );
                 
                                                 CREATE TABLE IF NOT EXISTS properties (
-                                                    created_by TEXT,
-                                                    last_modified_by TEXT,
-                                                    creation_date TEXT,
-                                                    last_modification_date TEXT
+                                                    rip_date INTEGER,
+                                                    spares_added_to_database                 INTEGER NOT NULL DEFAULT 0,
+                                                    spares_removed_from_database             INTEGER NOT NULL DEFAULT 0,
+                                                    spares_archived                          INTEGER NOT NULL DEFAULT 0,
+                                                    spares_unarchived                        INTEGER NOT NULL DEFAULT 0,
+                                                    range_and_product_family_changes         INTEGER NOT NULL DEFAULT 0,
+                                                    replacement_item_changes                 INTEGER NOT NULL DEFAULT 0,
+                                                    std_exchange_item_changes                INTEGER NOT NULL DEFAULT 0,
+                                                    spare_description_changes                INTEGER NOT NULL DEFAULT 0,
+                                                    end_of_service_date_changes              INTEGER NOT NULL DEFAULT 0,
+                                                    last_update_changes                      INTEGER NOT NULL DEFAULT 0,
+                                                    added_to_catalogue_date_changes          INTEGER NOT NULL DEFAULT 0,
+                                                    removed_from_catalogue_date_changes      INTEGER NOT NULL DEFAULT 0,
+                                                    comments_changes                         INTEGER NOT NULL DEFAULT 0
                                                 );
                 
                                                 CREATE TABLE IF NOT EXISTS ranges (
@@ -95,7 +105,28 @@ public class GlobalSparesSQLiteDatabaseCreator {
                                                     picture BLOB NOT NULL,
                                                     FOREIGN KEY (spare_name) REFERENCES spares(spare_item) ON DELETE CASCADE
                                                 );
-                
+                """;
+
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement stmt = conn.createStatement()) {
+
+            // Create tables
+            stmt.executeUpdate(createTables);
+            logger.info("Tables created successfully.");
+
+
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    public static void insert3phRanges(String databaseName) {
+        Path path = AppFileTools.getDbPath();
+        logger.info("Inserting 3ph Ranges...{}", path.toString());
+        String url = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir.resolve(databaseName);
+
+        // SQL commands for creating tables
+        String createTables = """
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('All', 'all', 'all', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Easy UPS 3L', '3ph', 'Easy UPS 3L,3LUPS', CURRENT_TIMESTAMP, null);
                 INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Easy UPS 3M', '3ph', 'Easy UPS 3M,3MUPS', CURRENT_TIMESTAMP, null);
@@ -135,8 +166,7 @@ public class GlobalSparesSQLiteDatabaseCreator {
 
             // Create tables
             stmt.executeUpdate(createTables);
-            logger.info("Tables created successfully.");
-
+            logger.info("Ranges inserted successfully.");
 
         } catch (SQLException e) {
             logger.error(e.getMessage());

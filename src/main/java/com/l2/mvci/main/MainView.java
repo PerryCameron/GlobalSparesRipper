@@ -1,7 +1,12 @@
 package com.l2.mvci.main;
 
+import com.l2.dto.SpareComparisonResult;
 import com.l2.dto.TaskItem;
 import com.l2.statictools.ImageResources;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -16,6 +21,7 @@ import javafx.beans.binding.Bindings;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class MainView implements Builder<Region> {
@@ -52,7 +58,7 @@ public class MainView implements Builder<Region> {
                     model.rootProperty().get().setCenter(createErrorMessage());
                 }
                 case VIEW_CHANGES -> {
-                    // we need to add our call for UI change here.
+                    model.rootProperty().get().setCenter(createChangesScreen());
                 }
 
                 case CONVERSION_DONE -> {
@@ -66,6 +72,57 @@ public class MainView implements Builder<Region> {
         model.rootProperty().get().setBottom(statusBar());
         model.rootProperty().get().setCenter(dropArea());
         return model.rootProperty().get();
+    }
+
+    private Region createChangesScreen() {
+        // --- TableView ---
+        TableView<Map.Entry<String, Integer>> table = new TableView<>();
+
+        TableColumn<Map.Entry<String, Integer>, String> changeCol = new TableColumn<>("Change");
+        changeCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getKey()));
+        changeCol.setPrefWidth(280);
+
+        TableColumn<Map.Entry<String, Integer>, Integer> countCol = new TableColumn<>("Count");
+        countCol.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue().getValue()));
+        countCol.setPrefWidth(100);
+
+        table.getColumns().addAll(Arrays.asList(changeCol, countCol));
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
+        SpareComparisonResult result = model.spareComparisonResultProperty().get();
+
+        ObservableList<Map.Entry<String, Integer>> rows = FXCollections.observableArrayList(
+                Map.entry("Spares added to database",                       result.getAdded()),
+                Map.entry("Spares removed from database",                     result.getRemoved()),
+                Map.entry("Spares archived",                    result.getArchived()),
+                Map.entry("Spares unarchived",                  result.getUnarchived()),
+                Map.entry("Range and Product Family Changes",                 result.getPimChanges()),
+                Map.entry("Replacement Item Changes",    result.getReplacementItemChanges()),
+                Map.entry("Std Exchange Item Changes",   result.getStandardExchangeItemChanges()),
+                Map.entry("Spare Description Changes",   result.getSpareDescriptionChanges()),
+                Map.entry("End of Service Date Changes", result.getEndOfServiceDateChanges()),
+                Map.entry("Last Update Changes",         result.getLastUpdateChanges()),
+                Map.entry("Added to Catalogue Date Changes",  result.getAddedToCatalogueChanges()),
+                Map.entry("Removed from Catalogue Date Changes", result.getRemovedFromCatalogueChanges()),
+                Map.entry("Comments Changes",            result.getCommentsChanges())
+        );
+
+        table.setItems(rows);
+
+        // --- Buttons ---
+        Button updateBtn = new Button("Update Active Database");
+        Button closeBtn  = new Button("Close");
+
+        HBox buttons = new HBox(10, updateBtn, closeBtn);
+        buttons.setPadding(new Insets(10));
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+
+        // --- Layout ---
+        VBox layout = new VBox(10, table, buttons);
+        layout.setPadding(new Insets(15));
+        VBox.setVgrow(table, Priority.ALWAYS);
+
+        return layout;
     }
 
     private Node statusBar() {
