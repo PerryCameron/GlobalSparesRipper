@@ -77,4 +77,6 @@ public interface GlobalSparesRepository {
     Map<String, Integer> countArchived();
 
     Map<String, SparesDTO> getAllBySpareItem();
+
+    int saveSpareComparisonResult(SpareComparisonResult result);
 }

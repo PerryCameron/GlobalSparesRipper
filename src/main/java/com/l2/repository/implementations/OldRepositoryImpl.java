@@ -28,17 +28,27 @@ public class OldRepositoryImpl implements OldRepository {
     public Map<String, Integer> countArchived() {
         Map<String, Integer> globalSpares = new HashMap<>();
         String sql = "SELECT spare_item, archived FROM spares";
-        jdbcTemplate.query(sql, rs -> {
-            globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
-        });
+        try {
+            jdbcTemplate.query(sql, rs -> {
+                globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
+            });
+        }  catch (Exception e) {
+            logger.error(e.getMessage());
+        }
         return globalSpares;
     }
 
     @Override
     public Map<String, SparesDTO> getAllBySpareItem() {
+        Map<String, SparesDTO> spares = new HashMap<>();
         String sql = "SELECT * FROM spares";
-        return jdbcTemplate.query(sql, new SparesRowMapper())
-                .stream()
-                .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
+        try {
+            spares = jdbcTemplate.query(sql, new SparesRowMapper())
+                    .stream()
+                    .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+        return spares;
     }
 }

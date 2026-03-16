@@ -15,9 +15,23 @@ public class Main extends Application {
     private MainController controller;
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
     public static String theme = "light";
-
+    public static boolean testMode = false;
+    public static boolean mvDatabase = true;
 
     public static void main(String[] args) {
+        // if one of the args is "test" I want to set the static variable  public static boolean testMode to true
+        for (String arg : args) {
+            if ("test".equalsIgnoreCase(arg)) {
+                testMode = true;
+                logger.info("test mode");
+                break;
+            }
+            if ("moveDatabase".equalsIgnoreCase(arg)) {
+                mvDatabase = false;
+                logger.info("move database mode");
+                break;
+            }
+        }
         launch(args);
     }
 

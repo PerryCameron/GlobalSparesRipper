@@ -28,7 +28,7 @@ public class MainController extends Controller<MainMessage> {
     @Override
     public void action(MainMessage msg) {
         switch (msg) {
-            case FILE_DROPPED_SUCCESS -> interactor.loadWorkbookFromDroppedFile(); // how can I send action back to do case LOAD_WORKBOOK_REQUEST from this method in interactor
+            case FILE_DROPPED_SUCCESS -> interactor.loadWorkbookFromDroppedFile();
 
             case LOAD_WORKBOOK_REQUEST -> {
 

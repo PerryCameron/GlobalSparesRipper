@@ -60,13 +60,15 @@ public class MainInteractor {
         }, backgroundExec).thenRunAsync(() -> {
             // Runs after phaseLogic finishes (success path)
             // for testing
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            if(Main.testMode) {
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+                model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            }
             // normal
             model.getTaskList().get(model.incrementElement()).setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
@@ -126,11 +128,14 @@ public class MainInteractor {
         Task<XSSFWorkbook> createDataBaseTask = new Task<>() {
             @Override
             protected XSSFWorkbook call() {
-//                if (AppFileTools.moveExistingGlobalSparesDb())
-                    logger.info("Existing Global Spares Catalogue found and moved for later comparison");
-//                else logger.info("There is no existing Global Spares Catalogue found");
-                // if it was created then copy it to the old dir
-//                GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
+                // TODO for testing remove later
+                if(!Main.testMode) {
+                    if (AppFileTools.moveExistingGlobalSparesDb())
+                        logger.info("Existing Global Spares Catalogue found and moved for later comparison");
+                    else logger.info("There is no existing Global Spares Catalogue found");
+                    // Create new db if in normal mode
+                    GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
+                }
                 model.setTotalWork(ExcelRipper.estimateTotalWork(model.getWorkbook()));
                 logger.info(model.totalWorkToString());
                 return null;
@@ -154,6 +159,125 @@ public class MainInteractor {
         model.getLoadingController().getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
     }
 
+//    public void convertToSql() {
+//        long start = System.currentTimeMillis();
+//        model.getProgressBar().setProgress(0);
+//        model.getTaskList().addAll(
+//                new TaskItem("Adding Product to Spares"),
+//                new TaskItem("Adding Archived Product to Spares"),
+//                new TaskItem("Adding Replacement CRs"),
+//                new TaskItem("Adding Uniflair Cross Reference"),
+//                new TaskItem("Consolidating Product to Spares"),
+//                new TaskItem("Consolidating Archived Product to Spares"),
+//                new TaskItem("Vacuuming database"),
+//                new TaskItem("Calculating Changes")
+//        );
+//        globalSparesRepository.changePRAGMASettinsForInsert();
+//        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
+//
+//        CompletableFuture<Void> chain = CompletableFuture.runAsync(() -> {}, backgroundExec);
+//
+//        // ──────────────────────────────────────────────────────
+//        // Phase 1: Active Product to Spares
+//        // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Product to Spares",
+//                () -> getSheet("Product to Spares").ifPresent(sheet ->
+//                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
+//                )
+//        ), backgroundExec);
+//        // ──────────────────────────────────────────────────────
+//        // Phase 2: Archived Product to Spares
+//        // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Archived Product to Spares",
+//                () -> {
+//                    getSheet("Archived Product to Spares").ifPresent(sheet ->
+//                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
+//                    );
+//                }
+//        ), backgroundExec);
+//        //──────────────────────────────────────────────────────
+//        // Phase 3 Replacement CRs
+//        //──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Replacement CRs",
+//                () -> {
+//                    getSheet("Replacement CRs").ifPresent(sheet ->
+//                            extractReplacementCr(sheet, model.getReplacementCRs())
+//                    );
+//                }
+//        ), backgroundExec);
+//        //──────────────────────────────────────────────────────
+//        // Phase 4 Uniflair Cross Reference
+//        //──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Uniflair Cross Reference",
+//                () -> {
+//                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+//                            extractReplacementCr(sheet, model.getUniflairCrossReference())
+//                    );
+//                }
+//        ), backgroundExec);
+//        // ──────────────────────────────────────────────────────
+//        // Phase 5 Consolidating Product to Spares
+//        // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Consolidating Product to Spares",
+//                () -> {
+//                    // increases speed by 3 seconds but increases size
+//                    //globalSparesRepository.indexProductToSpares();
+//                    consolidateWithJSON(false, editedSpares);
+//                }
+//        ), backgroundExec);
+//        // ──────────────────────────────────────────────────────
+//        // Phase 6 Consolidating Archived Product to Spares
+//        // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Consolidating Archived Product to Spares",
+//                () -> {
+//                    consolidateWithJSON(true, editedSpares);
+//                }
+//        ), backgroundExec);
+//        // ──────────────────────────────────────────────────────
+//        // Phase 7 Vacuum Database
+//        // ──────────────────────────────────────────────────────
+//        chain = chain.thenComposeAsync(v -> createPhase(
+//                "Vacuuming database",
+//                () -> {
+//                    cleanUpDatabase();
+//                }
+//        ), backgroundExec);
+//        // ──────────────────────────────────────────────────────
+//        // Phase 8: Calculate Changes (async, returns result)
+//        // ──────────────────────────────────────────────────────
+//        CompletableFuture<SpareComparisonResult> comparisonFuture = chain
+//                .thenApplyAsync(v -> compareSparesTables(), backgroundExec);
+//
+//        // ──────────────────────────────────────────────────────
+//        // Final completion / error handling
+//        // ──────────────────────────────────────────────────────
+//        comparisonFuture.whenCompleteAsync((result, ex) -> {
+//            long end = System.currentTimeMillis();
+//            String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
+//            logger.info("Time taken: {} ms", timeTaken);
+//
+//            if (ex == null) {
+//                model.spareComparisonResultProperty().setValue(result); // result from async
+//                globalSparesRepository.saveSpareComparisonResult(result);
+//                model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
+//                model.statusMessageProperty().set(timeTaken);
+//                model.getTa().appendText("All phases completed successfully ✓\n");
+//                model.getProgressBar().setProgress(1.0);
+//            } else {
+//                model.getTa().appendText("❌ Conversion failed: " + ex.getMessage() + "\n");
+//                ex.printStackTrace();
+//                model.viewStatusProperty().set(ViewStatus.ERROR);
+//                model.getProgressBar().setProgress(0);
+//            }
+//        }, fxExec);
+//    }
+
     public void convertToSql() {
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
@@ -167,6 +291,7 @@ public class MainInteractor {
                 new TaskItem("Vacuuming database"),
                 new TaskItem("Calculating Changes")
         );
+        // changes sqlite PRAGMA settings for speed
         globalSparesRepository.changePRAGMASettinsForInsert();
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
@@ -175,86 +300,94 @@ public class MainInteractor {
             // Optional: any quick synchronous setup
         }, backgroundExec);
 
-        // ──────────────────────────────────────────────────────
-        // Phase 1: Active Product to Spares
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Product to Spares",
-//                () -> getSheet("Product to Spares").ifPresent(sheet ->
-//                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
-//                )
-//        ), backgroundExec);
+        if(!Main.testMode) {
+            // ──────────────────────────────────────────────────────
+            // Phase 1: Active Product to Spares
+            // ──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Product to Spares",
+                    () -> getSheet("Product to Spares").ifPresent(sheet ->
+                            extractProductToSpares(sheet, false, model.getProductToSparesTotal())
+                    )
+            ), backgroundExec);
 
-        // ──────────────────────────────────────────────────────
-        // Phase 2: Archived Product to Spares
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Archived Product to Spares",
-//                () -> {
-//                    getSheet("Archived Product to Spares").ifPresent(sheet ->
-//                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
-//                    );
-//                }
-//        ), backgroundExec);
-        //──────────────────────────────────────────────────────
-        // Phase 3 Replacement CRs
-        //──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Replacement CRs",
-//                () -> {
-//                    getSheet("Replacement CRs").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, model.getReplacementCRs())
-//                    );
-//                }
-//        ), backgroundExec);
-        //──────────────────────────────────────────────────────
-        // Phase 4 Uniflair Cross Reference
-        //──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Uniflair Cross Reference",
-//                () -> {
-//                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, model.getUniflairCrossReference())
-//                    );
-//                }
-//        ), backgroundExec);
-        // ──────────────────────────────────────────────────────
-        // Phase 5 Consolidating Product to Spares
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Consolidating Product to Spares",
-//                () -> {
-//                    // increases speed by 3 seconds but increases size
-//                    //globalSparesRepository.indexProductToSpares();
-//                    consolidateWithJSON(false, editedSpares);
-//                }
-//        ), backgroundExec);
-        // ──────────────────────────────────────────────────────
-        // Phase 6 Consolidating Archived Product to Spares
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Consolidating Archived Product to Spares",
-//                () -> {
-//                    consolidateWithJSON(true, editedSpares);
-//                }
-//        ), backgroundExec);
-        // ──────────────────────────────────────────────────────
-        // Phase 7 Vacuum Database
-        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Vacuuming database",
-//                () -> {
-//                    cleanUpDatabase();
-//                }
-//        ), backgroundExec);
-        // ──────────────────────────────────────────────────────
-        // Final completion / error handling
-        // ──────────────────────────────────────────────────────
+            // ──────────────────────────────────────────────────────
+            // Phase 2: Archived Product to Spares
+            // ──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Archived Product to Spares",
+                    () -> {
+                        getSheet("Archived Product to Spares").ifPresent(sheet ->
+                                extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
+                        );
+                    }
+            ), backgroundExec);
+            //──────────────────────────────────────────────────────
+            // Phase 3 Replacement CRs
+            //──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Replacement CRs",
+                    () -> {
+                        getSheet("Replacement CRs").ifPresent(sheet ->
+                                extractReplacementCr(sheet, model.getReplacementCRs())
+                        );
+                    }
+            ), backgroundExec);
+            //──────────────────────────────────────────────────────
+            // Phase 4 Uniflair Cross Reference
+            //──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Uniflair Cross Reference",
+                    () -> {
+                        getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+                                extractReplacementCr(sheet, model.getUniflairCrossReference())
+                        );
+                    }
+            ), backgroundExec);
+            // ──────────────────────────────────────────────────────
+            // Phase 5 Consolidating Product to Spares
+            // ──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Consolidating Product to Spares",
+                    () -> {
+                        // increases speed by 3 seconds but increases size
+                        //globalSparesRepository.indexProductToSpares();
+                        consolidateWithJSON(false, editedSpares);
+                    }
+            ), backgroundExec);
+            // ──────────────────────────────────────────────────────
+            // Phase 6 Consolidating Archived Product to Spares
+            // ──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Consolidating Archived Product to Spares",
+                    () -> {
+                        consolidateWithJSON(true, editedSpares);
+                    }
+            ), backgroundExec);
+            // ──────────────────────────────────────────────────────
+            // Phase 7 Vacuum Database
+            // ──────────────────────────────────────────────────────
+            chain = chain.thenComposeAsync(v -> createPhase(
+                    "Vacuuming database",
+                    () -> {
+                        cleanUpDatabase();
+                    }
+            ), backgroundExec);
+            // ──────────────────────────────────────────────────────
+            // Final completion / error handling
+            // ──────────────────────────────────────────────────────
+        }
+
         chain.whenCompleteAsync((result, ex) -> {
             long end = System.currentTimeMillis();
             String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
             logger.info("Time taken: {} ms", timeTaken);
-            model.spareComparisonResultProperty().setValue(compareSparesTables());
+            try {
+                model.spareComparisonResultProperty().setValue(compareSparesTables());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Sent changes to view");
             model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
             model.statusMessageProperty().set(timeTaken);
             if (ex == null) {
@@ -269,7 +402,6 @@ public class MainInteractor {
             }
         }, fxExec);
     }
-
 
     public static String millisecondsToMinutesSeconds(long milliseconds) {
         long totalSeconds = milliseconds / 1000;
@@ -477,6 +609,11 @@ public class MainInteractor {
     public static boolean cleanUpDatabase() {
         globalSparesRepository.dropProductToSparesAndVacuum();
         return true;
+    }
+
+
+    private static String ts() {
+        return java.time.LocalDateTime.now() + " [" + Thread.currentThread().getName() + "]";
     }
 
 

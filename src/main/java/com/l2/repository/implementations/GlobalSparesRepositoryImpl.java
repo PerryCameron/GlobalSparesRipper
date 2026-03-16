@@ -17,6 +17,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -24,6 +25,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -967,81 +969,6 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         });
     }
 
-    // Grok version
-//    @Override
-//    public List<ProductToSparesDTO> getConsolidatedSpares(boolean isArchived) {
-//        String sql = """
-//        SELECT
-//            spare_item,
-//            replacement_item,
-//            standard_exchange_item,
-//            spare_description,
-//            catalogue_version,
-//            end_of_service_date,
-//            last_update,
-//            added_to_catalogue,
-//            removed_from_catalogue,
-//            comments,
-//            keywords,
-//            archived,
-//            custom_add,
-//            last_updated_by,
-//            MIN(id) AS source_id,
-//            json_group_array(
-//                json_object(
-//                    'range', pim_range,
-//                    'product_families', product_families
-//                )
-//            ) FILTER (WHERE product_families IS NOT NULL
-//            AND product_families != '[]')
-//            AND product_families != 'null') AS pim_json
-//        FROM (
-//            SELECT
-//                *,
-//                json_group_array(DISTINCT json(pim_product_family)) AS product_families
-//            FROM product_to_spares
-//            WHERE archived = ?
-//              AND spare_item IS NOT NULL
-//              AND trim(spare_item) != ''
-//            GROUP BY spare_item, pim_range
-//        ) sub
-//        GROUP BY spare_item
-//        ORDER BY spare_item
-//        """;
-//
-//        return jdbcTemplate.query(sql,
-//                ps -> ps.setInt(1, isArchived ? 1 : 0),
-//                (rs, rowNum) -> {
-//                    ProductToSparesDTO dto = new ProductToSparesDTO();
-//                    dto.setSpareItem(rs.getString("spare_item"));
-//                    dto.setReplacementItem(rs.getString("replacement_item"));
-//                    dto.setStandardExchangeItem(rs.getString("standard_exchange_item"));
-//                    dto.setSpareDescription(rs.getString("spare_description"));
-//                    dto.setCatalogueVersion(rs.getString("catalogue_version"));
-//                    dto.setProductEndOfServiceDate(rs.getString("end_of_service_date")); // note name mapping
-//                    dto.setLastUpdate(rs.getString("last_update"));
-//                    dto.setAddedToCatalogue(rs.getString("added_to_catalogue"));
-//                    dto.setRemovedFromCatalogue(rs.getString("removed_from_catalogue"));
-//                    dto.setComments(rs.getString("comments"));
-//                    dto.setKeywords(rs.getString("keywords"));
-//                    dto.setArchived(rs.getInt("archived") == 1);
-//                    dto.setCustomAdd(rs.getInt("custom_add") == 1);
-//                    dto.setLastUpdatedBy(rs.getString("last_updated_by"));
-//
-//                    // The aggregated PIM JSON – ready to be set
-//                    String pimJson = rs.getString("pim_json");
-//                    if (pimJson != null && !"null".equals(pimJson) && !"[]".equals(pimJson)) {
-//                        dto.setPimRange(pimJson);  // ← your JSON array string
-//                    } else {
-//                        dto.setPimRange("[]");
-//                    }
-//
-//                    // Optional: keep source id if you want to re-fetch the original row later
-//                    // int sourceId = rs.getInt("source_id");
-//
-//                    return dto;
-//                });
-//    }
 
     @Override
     public List<ProductToSparesDTO> getConsolidatedSpares(boolean isArchived) {
@@ -1163,11 +1090,72 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
 
     @Override
     public Map<String, SparesDTO> getAllBySpareItem() {
+        System.out.println("getAllBySpareItem() called");
         String sql = "SELECT * FROM spares";
         return jdbcTemplate.query(sql, new SparesRowMapper())
                 .stream()
                 .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
     }
+
+    @Override
+    public int saveSpareComparisonResult(SpareComparisonResult result) {
+        final String sql = """
+            INSERT INTO properties (
+                rip_date,
+                spares_added_to_database,
+                spares_removed_from_database,
+                spares_archived,
+                spares_unarchived,
+                range_and_product_family_changes,
+                replacement_item_changes,
+                std_exchange_item_changes,
+                spare_description_changes,
+                end_of_service_date_changes,
+                last_update_changes,
+                added_to_catalogue_date_changes,
+                removed_from_catalogue_date_changes,
+                comments_changes
+            ) VALUES (
+                :rip_date,
+                :spares_added_to_database,
+                :spares_removed_from_database,
+                :spares_archived,
+                :spares_unarchived,
+                :range_and_product_family_changes,
+                :replacement_item_changes,
+                :std_exchange_item_changes,
+                :spare_description_changes,
+                :end_of_service_date_changes,
+                :last_update_changes,
+                :added_to_catalogue_date_changes,
+                :removed_from_catalogue_date_changes,
+                :comments_changes
+            )
+            """;
+
+        long epochSeconds = Instant.now().getEpochSecond();
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("rip_date", epochSeconds)
+                .addValue("spares_added_to_database", result.getAdded())
+                .addValue("spares_removed_from_database", result.getRemoved())
+                .addValue("spares_archived", result.getArchived())
+                .addValue("spares_unarchived", result.getUnarchived())
+                .addValue("range_and_product_family_changes", result.getPimChanges())
+                .addValue("replacement_item_changes", result.getReplacementItemChanges())
+                .addValue("std_exchange_item_changes", result.getStandardExchangeItemChanges())
+                .addValue("spare_description_changes", result.getSpareDescriptionChanges())
+                .addValue("end_of_service_date_changes", result.getEndOfServiceDateChanges())
+                .addValue("last_update_changes", result.getLastUpdateChanges())
+                .addValue("added_to_catalogue_date_changes", result.getAddedToCatalogueChanges())
+                .addValue("removed_from_catalogue_date_changes", result.getRemovedFromCatalogueChanges())
+                .addValue("comments_changes", result.getCommentsChanges());
+
+        int rows = namedParameterJdbcTemplate.update(sql, params);
+        logger.debug("Inserted {} row(s) into properties at epoch {}", rows, epochSeconds);
+        return rows;
+    }
+
 }
 
 
