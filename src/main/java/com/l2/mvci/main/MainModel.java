@@ -30,6 +30,7 @@ public class MainModel {
     private final LoadingController loadingController = new LoadingController();
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
+    private boolean[] options = null;
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
     private final ObservableList<TaskItem> taskList = FXCollections.observableArrayList();
     public ObservableList<TaskItem> getTaskList() { return taskList; }
@@ -181,5 +182,13 @@ public class MainModel {
 
     public ObjectProperty<Label> fileNameProperty() {
         return fileName;
+    }
+
+    public boolean[] getOptions() {
+        return options;
+    }
+
+    public void setOptions(boolean[] options) {
+        this.options = options;
     }
 }

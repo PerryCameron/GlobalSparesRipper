@@ -387,10 +387,17 @@ public class MainView implements Builder<Region> {
 
         // Example handler stub (wire to your actual build logic)
         buildBtn.setOnAction(e -> {
-            boolean include3Phase = cb3Phase.isSelected();
-            boolean includeCooling = cbCooling.isSelected();
-            boolean includeNotes = cbNotes.isSelected();
-            boolean includePhotos = cbPhotos.isSelected();
+
+            boolean[] options = new boolean[] {
+                    cuParts.isSelected(),    // include custom parts
+                    cb3Phase.isSelected(),   // include 3 phase ranges
+                    cbCooling.isSelected(),  // include cooling ranges
+                    cbNotes.isSelected(),    // include custom notes
+                    cbPhotos.isSelected()    // include photos
+            };
+
+
+            action.accept(MainMessage.BUILD_FINAL_DATABASE);
 
             // TODO: Invoke your build routine here, e.g.:
             // buildFinalDatabase(Paths.get(selectedPath), include3Phase, includeCooling, includeNotes, includePhotos);

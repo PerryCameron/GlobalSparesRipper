@@ -19,7 +19,7 @@ public class GSUpdater {
 
 private static void updateDataBase() {
     GlobalSparesRepositoryImpl globalSparesRepository = new GlobalSparesRepositoryImpl();
-    ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
+    ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl("not used");
 
     logger.info("{} spares found in newly created repo", globalSparesRepository.countSpares());
     logger.info("{} spares found in production repo", productionRepository.countSpares());

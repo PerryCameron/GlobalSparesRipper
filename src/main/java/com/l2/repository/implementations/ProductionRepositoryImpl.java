@@ -26,8 +26,8 @@ public class ProductionRepositoryImpl implements ProductionRepository {
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public ProductionRepositoryImpl() {
-        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getProductionDataSource("Production Repo"));
+    public ProductionRepositoryImpl(String absolutePath) {
+        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getProductionDataSource("Production Repo", absolutePath));
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
     }
 

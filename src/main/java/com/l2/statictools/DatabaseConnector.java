@@ -20,9 +20,9 @@ public class DatabaseConnector {
     }
 
     // this is the production database copied from application folder.
-    public static SQLiteDataSource getProductionDataSource(String caller) {
-        String DATABASE_URL = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir + "/Production/global-spares.db";
-        return getSqLiteDataSource(caller, DATABASE_URL);
+    public static SQLiteDataSource getProductionDataSource(String caller, String absolutePath) {
+        String databaseUrl = "jdbc:sqlite:" + absolutePath;
+        return getSqLiteDataSource(caller, databaseUrl);
     }
 
     public static DataSource getOldSparesDataSource(String caller) {

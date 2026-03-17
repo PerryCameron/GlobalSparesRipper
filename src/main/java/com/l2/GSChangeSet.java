@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public class GSChangeSet {
     private static final Logger logger = LoggerFactory.getLogger(GSChangeSet.class);
-    private static final ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl();
+    private static final ProductionRepositoryImpl productionRepository = new ProductionRepositoryImpl("not used");
     private static final ChangeSetRepositoryImpl changeSetRepository = new ChangeSetRepositoryImpl();
     public static Integer firstTimeEdited = 0;
     public static Integer editedBefore = 0;

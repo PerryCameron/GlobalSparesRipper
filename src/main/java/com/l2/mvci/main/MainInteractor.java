@@ -4,8 +4,10 @@ import com.l2.*;
 import com.l2.dto.*;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
 import com.l2.repository.implementations.OldRepositoryImpl;
+import com.l2.repository.implementations.ProductionRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import com.l2.repository.interfaces.OldRepository;
+import com.l2.repository.interfaces.ProductionRepository;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
@@ -31,6 +33,7 @@ public class MainInteractor {
     private static final Logger logger = LoggerFactory.getLogger(MainInteractor.class);
     private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
     private static final OldRepository oldRepository = new OldRepositoryImpl();
+    private static ProductionRepository productionRepository = null;
 
     public MainInteractor(MainModel model) {
         this.model = model;
@@ -601,7 +604,7 @@ public class MainInteractor {
             return fallback;
         } catch (Exception e) {
             // log and return a sentinel if you prefer, or fallback to 0.0
-            // logger.error("Qty parse failed at row {}, col {}: {}", cell.getRowIndex(), cell.getColumnIndex(), e.getMessage());
+            logger.error("Qty parse failed at row {}, col {}: {}", cell.getRowIndex(), cell.getColumnIndex(), e.getMessage());
             return 99999.0; // or fallback
         }
     }
@@ -611,11 +614,9 @@ public class MainInteractor {
         return true;
     }
 
-
     private static String ts() {
         return java.time.LocalDateTime.now() + " [" + Thread.currentThread().getName() + "]";
     }
-
 
     public SpareComparisonResult compareSparesTables() {
 
