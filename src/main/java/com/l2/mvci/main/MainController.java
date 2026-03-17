@@ -4,8 +4,6 @@ package com.l2.mvci.main;
 import com.l2.interfaces.Controller;
 import javafx.scene.layout.Region;
 
-import static com.l2.mvci.main.ViewStatus.*;
-
 
 public class MainController extends Controller<MainMessage> {
 
@@ -33,15 +31,13 @@ public class MainController extends Controller<MainMessage> {
             case LOAD_WORKBOOK_REQUEST -> {
 
             }
-            case PREP_CONV -> {
-                interactor.prepConvertToSql();
-            }
-            case CONVERT_TO_SQL -> {
-                interactor.convertToSql();
-            }
+            case PREP_CONV -> interactor.prepConvertToSql();
+            case CONVERT_TO_SQL -> interactor.convertToSql();
             case NONE, SEND_MESSAGE -> {
                 // no-op / future use
             }
+            case CLOSE_APPLICATION -> interactor.closeApplication();
+            case UPDATE_OPTIONS -> { interactor.updateOptions();}
         }
     }
 }

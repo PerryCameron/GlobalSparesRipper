@@ -9,6 +9,8 @@ public interface ApplicationPaths {
     Path globalSparesDir = homeDir.resolve("Global Spares");
     Path pastSqlDataBase = globalSparesDir.resolve("Past Catalogue");
     Path catalogueDir = globalSparesDir.resolve("Catalogue");
+    Path tseNotes = homeDir.resolve("TSENotes");
+    Path globalSparesForTse = tseNotes.resolve("global_spares");
 
     // what are we do do with this nonsense
     Path sourceExcel = Paths.get(globalSparesDir.toString(), "Global Spares Catalogue.xlsx");

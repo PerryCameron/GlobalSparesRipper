@@ -49,9 +49,9 @@ public class Main extends Application {
         controller = new MainController();
         logger.info("Main controller created");
         primaryStage.setWidth(500);
-        primaryStage.setHeight(400);
-        primaryStage.setMinHeight(400);
+        primaryStage.setMinHeight(550);
         primaryStage.setMinWidth(500);
+        primaryStage.setHeight(550);
         primaryStage.setResizable(true);
         primaryStage.setScene(new Scene(controller.getView()));
         primaryStage.setTitle("Global Spares Ripper");

@@ -26,6 +26,7 @@ public class MainModel {
     private final ObjectProperty<BorderPane> root = new SimpleObjectProperty<>();
     private final ObjectProperty<Button> button = new SimpleObjectProperty<>(new Button("Close"));
     private final ObjectProperty<SpareComparisonResult> spareComparisonResult = new SimpleObjectProperty<>();
+    private final ObjectProperty<Label> fileName = new SimpleObjectProperty<>(new Label(""));
     private final LoadingController loadingController = new LoadingController();
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
@@ -176,5 +177,9 @@ public class MainModel {
 
     public ObjectProperty<SpareComparisonResult> spareComparisonResultProperty() {
         return spareComparisonResult;
+    }
+
+    public ObjectProperty<Label> fileNameProperty() {
+        return fileName;
     }
 }

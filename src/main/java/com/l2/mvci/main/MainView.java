@@ -1,5 +1,6 @@
 package com.l2.mvci.main;
 
+import com.l2.ApplicationPaths;
 import com.l2.dto.SpareComparisonResult;
 import com.l2.dto.TaskItem;
 import com.l2.statictools.ImageResources;
@@ -16,11 +17,15 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import javafx.util.Builder;
 import javafx.beans.binding.Bindings;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -40,33 +45,20 @@ public class MainView implements Builder<Region> {
         model.viewStatusProperty().addListener((obs, oldStatus, newStatus) -> {
             model.rootProperty().get().setCenter(null);
             switch (newStatus) {
-                case XFS_LOADED -> {
-                    model.rootProperty().get().setCenter(createStatusArea());
-                }
-                case LOADING_XFS -> {
-                    model.rootProperty().get().setCenter(createLabledProcess("Parsing Global Spares Catalogue.xlsx"));
-                }
-                case PREP_TO_CONVERT -> {
-                    model.rootProperty().get().setCenter(createLabledProcess("Calculating Conversion time"));
-                }
+                case XFS_LOADED -> model.rootProperty().get().setCenter(createStatusArea());
+                case LOADING_XFS ->
+                        model.rootProperty().get().setCenter(createLabledProcess("Parsing Global Spares Catalogue.xlsx"));
+                case PREP_TO_CONVERT ->
+                        model.rootProperty().get().setCenter(createLabledProcess("Calculating Conversion time"));
                 case CONVERT_TO_SQL -> {
-                    com.l2.Main.primaryStage.setHeight(600);
                     model.rootProperty().get().setCenter(createConvertScreen());
                     action.accept(MainMessage.CONVERT_TO_SQL);
                 }
-                case ERROR -> {
-                    model.rootProperty().get().setCenter(createErrorMessage());
-                }
-                case VIEW_CHANGES -> {
-                    model.rootProperty().get().setCenter(createChangesScreen());
-                }
-
-                case CONVERSION_DONE -> {
-                    model.buttonProperty().get().setVisible(true);
-                }
-                default -> {
-                    model.rootProperty().get().setCenter(dropArea());
-                }
+                case ERROR -> model.rootProperty().get().setCenter(createErrorMessage());
+                case VIEW_CHANGES -> model.rootProperty().get().setCenter(createChangesScreen());
+                case CONVERSION_DONE -> model.buttonProperty().get().setVisible(true);
+                case UPDATE_OPTIONS -> model.rootProperty().get().setCenter(chooseOptions());
+                default -> model.rootProperty().get().setCenter(dropArea());
             }
         });
         model.rootProperty().get().setBottom(statusBar());
@@ -91,31 +83,39 @@ public class MainView implements Builder<Region> {
 
         SpareComparisonResult result = model.spareComparisonResultProperty().get();
 
-        ObservableList<Map.Entry<String, Integer>> rows = FXCollections.observableArrayList(
-                Map.entry("Spares added to database",                       result.getAdded()),
-                Map.entry("Spares removed from database",                     result.getRemoved()),
-                Map.entry("Spares archived",                    result.getArchived()),
-                Map.entry("Spares unarchived",                  result.getUnarchived()),
-                Map.entry("Range and Product Family Changes",                 result.getPimChanges()),
-                Map.entry("Replacement Item Changes",    result.getReplacementItemChanges()),
-                Map.entry("Std Exchange Item Changes",   result.getStandardExchangeItemChanges()),
-                Map.entry("Spare Description Changes",   result.getSpareDescriptionChanges()),
+        ObservableList<Map.Entry<String, Integer>> rows = FXCollections.observableArrayList(List.of(
+                Map.entry("Spares added to database", result.getAdded()),
+                Map.entry("Spares removed from database", result.getRemoved()),
+                Map.entry("Spares archived", result.getArchived()),
+                Map.entry("Spares unarchived", result.getUnarchived()),
+                Map.entry("Range and Product Family Changes", result.getPimChanges()),
+                Map.entry("Replacement Item Changes", result.getReplacementItemChanges()),
+                Map.entry("Std Exchange Item Changes", result.getStandardExchangeItemChanges()),
+                Map.entry("Spare Description Changes", result.getSpareDescriptionChanges()),
                 Map.entry("End of Service Date Changes", result.getEndOfServiceDateChanges()),
-                Map.entry("Last Update Changes",         result.getLastUpdateChanges()),
-                Map.entry("Added to Catalogue Date Changes",  result.getAddedToCatalogueChanges()),
+                Map.entry("Last Update Changes", result.getLastUpdateChanges()),
+                Map.entry("Added to Catalogue Date Changes", result.getAddedToCatalogueChanges()),
                 Map.entry("Removed from Catalogue Date Changes", result.getRemovedFromCatalogueChanges()),
-                Map.entry("Comments Changes",            result.getCommentsChanges())
-        );
+                Map.entry("Comments Changes", result.getCommentsChanges())
+        ));
 
         table.setItems(rows);
 
         // --- Buttons ---
-        Button updateBtn = new Button("Update Active Database");
-        Button closeBtn  = new Button("Close");
+        Button updateBtn = new Button("Choose update options");
+        Button closeBtn = new Button("Close");
 
         HBox buttons = new HBox(10, updateBtn, closeBtn);
         buttons.setPadding(new Insets(10));
         buttons.setAlignment(Pos.CENTER_RIGHT);
+
+        closeBtn.setOnAction(event -> {
+            action.accept(MainMessage.CLOSE_APPLICATION);
+        });
+
+        updateBtn.setOnAction(event -> {
+            action.accept(MainMessage.UPDATE_OPTIONS);
+        });
 
         // --- Layout ---
         VBox layout = new VBox(10, table, buttons);
@@ -131,7 +131,7 @@ public class MainView implements Builder<Region> {
         Label statusLabel = new Label("");
         statusLabel.textProperty().bind(model.statusMessageProperty());
         statusBar.getChildren().add(statusLabel);
-        return  statusBar;
+        return statusBar;
     }
 
     private Node createConvertScreen() {
@@ -311,4 +311,104 @@ public class MainView implements Builder<Region> {
 
         return box;
     }
+
+    private Node chooseOptions() {
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(10));
+
+        Path dbPath = ApplicationPaths.globalSparesForTse.resolve("global-spares.db");
+        File dbFile = dbPath.toFile();
+        model.fileNameProperty().get().setText(dbFile.getAbsolutePath());
+        Label explanationLabel = new Label();
+        explanationLabel.setWrapText(true);
+        explanationLabel.setText("""
+                We have now ripped a clean new database. It is missing the following items.
+                \t \u2022 Ranges
+                \t \u2022 Photos
+                \t \u2022 Custom notes
+                \t \u2022 Custom added parts
+                
+                It is time to decide the options we want to add from the old database
+                 """);
+
+        root.getChildren().addAll(explanationLabel, new Separator(), new Label("1) Select location of old database if different from below"));
+
+        if (dbFile.isFile()) {
+            root.getChildren().add(model.fileNameProperty().get());
+        } else {
+            root.getChildren().add(new Label("Current spares database not found:"));
+        }
+
+        Button browseBtn = new Button("Choose new database");
+        browseBtn.setOnAction(e -> {
+            FileChooser chooser = new FileChooser();
+            // Ensure dbFile is not null and has a valid, existing parent directory
+            if (dbFile != null) {
+                File parentDir = dbFile.getParentFile();
+                if (parentDir != null && parentDir.isDirectory() && parentDir.exists()) {
+                    chooser.setInitialDirectory(parentDir);
+                }
+                // This is only a hint and mostly relevant for Save dialogs
+                chooser.setInitialFileName(dbFile.getName());
+            }
+            // Use patterns for filters
+            chooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("Database files (*.db)", "*.db"),
+                    new FileChooser.ExtensionFilter("All Files", "*.*")
+            );
+            // Get a Window owner (replace 'browseBtn.getScene().getWindow()' if you have a Stage reference)
+            Window owner = browseBtn.getScene() != null ? browseBtn.getScene().getWindow() : null;
+            // Show the dialog
+            File selected = chooser.showOpenDialog(owner);
+            if (selected != null) {
+                model.fileNameProperty().get().setText(selected.getAbsolutePath());
+            }
+        });
+
+        // --- Checkboxes ---
+        CheckBox cuParts = new CheckBox("Include custom part adds from existing database");
+        CheckBox cb3Phase = new CheckBox("Include Ranges for 3 phase power");
+        CheckBox cbCooling = new CheckBox("Include Ranges for cooling");
+        CheckBox cbNotes = new CheckBox("Include notes from existing database");
+        CheckBox cbPhotos = new CheckBox("Include photos from existing database");
+
+
+        cuParts.setSelected(true);
+        cb3Phase.setSelected(true);
+        cbCooling.setSelected(false);
+        cbNotes.setSelected(true);
+        cbPhotos.setSelected(true);
+
+        VBox optionsBox = new VBox(6, cuParts, cb3Phase, cbCooling, cbNotes, cbPhotos);
+
+        // --- Build button ---
+        Button buildBtn = new Button("Build database");
+        buildBtn.setDefaultButton(true);
+
+        // Example handler stub (wire to your actual build logic)
+        buildBtn.setOnAction(e -> {
+            boolean include3Phase = cb3Phase.isSelected();
+            boolean includeCooling = cbCooling.isSelected();
+            boolean includeNotes = cbNotes.isSelected();
+            boolean includePhotos = cbPhotos.isSelected();
+
+            // TODO: Invoke your build routine here, e.g.:
+            // buildFinalDatabase(Paths.get(selectedPath), include3Phase, includeCooling, includeNotes, includePhotos);
+
+            // You might also want to validate:
+            // - selectedPath not empty
+            // - file exists and is readable
+            // - show feedback to user via dialog/label
+        });
+
+        HBox box = new HBox(20);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.getChildren().addAll(new Label("3) Build custom database"), buildBtn);
+        // Layout
+        root.getChildren().addAll(browseBtn, new Separator(), new Label("2) Choose Options"),
+                optionsBox, new Separator(), box);
+
+        return root;
+    }
+
 }

@@ -663,4 +663,12 @@ public class MainInteractor {
                 addedToCatalogueChanges, removedFromCatalogueChanges, commentsChanges
         );
     }
+
+    public void closeApplication() {
+        System.exit(0);
+    }
+
+    public void updateOptions() {
+        model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
+    }
 }
