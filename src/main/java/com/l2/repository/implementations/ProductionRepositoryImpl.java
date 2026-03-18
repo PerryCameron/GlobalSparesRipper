@@ -19,6 +19,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ProductionRepositoryImpl implements ProductionRepository {
@@ -29,6 +30,20 @@ public class ProductionRepositoryImpl implements ProductionRepository {
     public ProductionRepositoryImpl(String absolutePath) {
         this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getProductionDataSource("Production Repo", absolutePath));
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+    }
+
+    @Override
+    public List<SparesDTO> getCustomAddedSpares() {
+        final String sql = "SELECT * FROM spares WHERE custom_add = 1";
+
+        try {
+            List<SparesDTO> result = jdbcTemplate.query(sql, new SparesRowMapper());
+            logger.info("Retrieved {} custom added spares", result.size());
+            return result;
+        } catch (Exception e) {
+            logger.error("Error retrieving custom added spares", e);
+            return Collections.emptyList();
+        }
     }
 
     @Override

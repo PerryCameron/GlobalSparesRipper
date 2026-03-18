@@ -672,4 +672,18 @@ public class MainInteractor {
     public void updateOptions() {
         model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
     }
+
+    public void buildFinalDatabase() {
+        String absolutePath = model.fileNameProperty().get().getText();
+        productionRepository = new ProductionRepositoryImpl(absolutePath);
+        System.out.println(model.dataBaseOptionsObjectProperty().get().toString());
+
+        // this will get our spares (works)
+        // List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
+        // customSpares.stream().forEach(System.out::println);
+
+        // next lets add ranges
+        if(model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
+        GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
+    }
 }

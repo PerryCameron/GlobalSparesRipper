@@ -17,43 +17,35 @@ public class DataBaseOptions {
         this.includePhotos = includePhotos;
     }
 
-    public boolean isIncludeCustomParts() {
+    public boolean includesCustomParts() {
         return includeCustomParts;
     }
 
-    public void setIncludeCustomParts(boolean includeCustomParts) {
-        this.includeCustomParts = includeCustomParts;
-    }
-
-    public boolean isInclude3PhaseRanges() {
+    public boolean includes3PhaseRanges() {
         return include3PhaseRanges;
     }
 
-    public void setInclude3PhaseRanges(boolean include3PhaseRanges) {
-        this.include3PhaseRanges = include3PhaseRanges;
-    }
-
-    public boolean isIncludeCoolingRanges() {
+    public boolean includeaCoolingRanges() {
         return includeCoolingRanges;
     }
 
-    public void setIncludeCoolingRanges(boolean includeCoolingRanges) {
-        this.includeCoolingRanges = includeCoolingRanges;
-    }
-
-    public boolean isIncludeCustomNotes() {
+    public boolean includesCustomNotes() {
         return includeCustomNotes;
     }
 
-    public void setIncludeCustomNotes(boolean includeCustomNotes) {
-        this.includeCustomNotes = includeCustomNotes;
-    }
-
-    public boolean isIncludePhotos() {
+    public boolean includesPhotos() {
         return includePhotos;
     }
 
-    public void setIncludePhotos(boolean includePhotos) {
-        this.includePhotos = includePhotos;
+
+    @Override
+    public String toString() {
+        return "DataBaseOptions{" +
+                "includeCustomParts=" + includeCustomParts +
+                ", include3PhaseRanges=" + include3PhaseRanges +
+                ", includeCoolingRanges=" + includeCoolingRanges +
+                ", includeCustomNotes=" + includeCustomNotes +
+                ", includePhotos=" + includePhotos +
+                '}';
     }
 }

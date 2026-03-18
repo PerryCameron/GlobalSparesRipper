@@ -3,6 +3,7 @@ package com.l2.mvci.main;
 import com.l2.dto.SpareComparisonResult;
 import com.l2.dto.TaskItem;
 import com.l2.mvci.load.LoadingController;
+import com.l2.pojo.DataBaseOptions;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -27,10 +28,10 @@ public class MainModel {
     private final ObjectProperty<Button> button = new SimpleObjectProperty<>(new Button("Close"));
     private final ObjectProperty<SpareComparisonResult> spareComparisonResult = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> fileName = new SimpleObjectProperty<>(new Label(""));
+    private final ObjectProperty<DataBaseOptions> dataBaseOptionsObjectProperty = new SimpleObjectProperty<>();
     private final LoadingController loadingController = new LoadingController();
     private final ProgressBar progressBar = new ProgressBar(0);
     private final TextArea ta = new TextArea();
-    private boolean[] options = null;
     private XSSFWorkbook workbook;   // not a property → we don't want FX bindings on heavy object
     private final ObservableList<TaskItem> taskList = FXCollections.observableArrayList();
     public ObservableList<TaskItem> getTaskList() { return taskList; }
@@ -184,11 +185,7 @@ public class MainModel {
         return fileName;
     }
 
-    public boolean[] getOptions() {
-        return options;
-    }
-
-    public void setOptions(boolean[] options) {
-        this.options = options;
+    public ObjectProperty<DataBaseOptions> dataBaseOptionsObjectProperty() {
+        return dataBaseOptionsObjectProperty;
     }
 }

@@ -6,6 +6,8 @@ import com.l2.dto.SparesDTO;
 import java.util.List;
 
 public interface ProductionRepository {
+    List<SparesDTO> getCustomAddedSpares();
+
     List<String> getSpareItems();
 
     void insertSpare(SparesDTO sparesDTO);

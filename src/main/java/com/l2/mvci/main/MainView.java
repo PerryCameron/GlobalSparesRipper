@@ -3,6 +3,7 @@ package com.l2.mvci.main;
 import com.l2.ApplicationPaths;
 import com.l2.dto.SpareComparisonResult;
 import com.l2.dto.TaskItem;
+import com.l2.pojo.DataBaseOptions;
 import com.l2.statictools.ImageResources;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -329,7 +330,7 @@ public class MainView implements Builder<Region> {
                 \t \u2022 Custom added parts
                 
                 It is time to decide the options we want to add from the old database
-                 """);
+                """);
 
         root.getChildren().addAll(explanationLabel, new Separator(), new Label("1) Select location of old database if different from below"));
 
@@ -387,15 +388,14 @@ public class MainView implements Builder<Region> {
 
         // Example handler stub (wire to your actual build logic)
         buildBtn.setOnAction(e -> {
-
-            boolean[] options = new boolean[] {
+            DataBaseOptions dataBaseOptions = new DataBaseOptions(
                     cuParts.isSelected(),    // include custom parts
                     cb3Phase.isSelected(),   // include 3 phase ranges
                     cbCooling.isSelected(),  // include cooling ranges
                     cbNotes.isSelected(),    // include custom notes
-                    cbPhotos.isSelected()    // include photos
-            };
+                    cbPhotos.isSelected());    // include photos
 
+            model.dataBaseOptionsObjectPropertyProperty().set(dataBaseOptions);
 
             action.accept(MainMessage.BUILD_FINAL_DATABASE);
 
