@@ -21,6 +21,7 @@ public class MainModel {
     private final IntegerProperty element = new SimpleIntegerProperty(0);
     private final LongProperty timeTaken = new SimpleLongProperty(0);
     private final BooleanProperty workbookReady = new SimpleBooleanProperty(false);
+    private final BooleanProperty sparesExists = new SimpleBooleanProperty(false);
     private final int[] totalWork = new int[] { 0,0,0,0,0,0 };
     private final ObjectProperty<ViewStatus> viewStatus = new SimpleObjectProperty<>();
     private final ObjectProperty<Label> label = new SimpleObjectProperty<>();
@@ -187,5 +188,13 @@ public class MainModel {
 
     public ObjectProperty<DataBaseOptions> dataBaseOptionsObjectProperty() {
         return dataBaseOptionsObjectProperty;
+    }
+
+    public boolean sparesDataBaseExists() {
+        return sparesExists.get();
+    }
+
+    public BooleanProperty sparesDataBaseProperty() {
+        return sparesExists;
     }
 }

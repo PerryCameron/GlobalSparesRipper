@@ -3,7 +3,6 @@ package com.l2.mvci.main;
 import com.l2.*;
 import com.l2.dto.*;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
-import com.l2.repository.implementations.OldRepositoryImpl;
 import com.l2.repository.implementations.ProductionRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import com.l2.repository.interfaces.OldRepository;
@@ -16,6 +15,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sqlite.SQLiteDataSource;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,13 +26,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 
-
 public class MainInteractor {
 
     private final MainModel model;
     private static final Logger logger = LoggerFactory.getLogger(MainInteractor.class);
-    private static final GlobalSparesRepository globalSparesRepository = new GlobalSparesRepositoryImpl();
-    private static final OldRepository oldRepository = new OldRepositoryImpl();
+    private static GlobalSparesRepository globalSparesRepository = null;
+    private static final OldRepository oldRepository = null;
     private static ProductionRepository productionRepository = null;
 
     public MainInteractor(MainModel model) {
@@ -63,7 +62,7 @@ public class MainInteractor {
         }, backgroundExec).thenRunAsync(() -> {
             // Runs after phaseLogic finishes (success path)
             // for testing
-            if(Main.testMode) {
+            if (Main.testMode) {
                 model.getTaskList().get(model.incrementElement()).setCompleted(true);
                 model.getTaskList().get(model.incrementElement()).setCompleted(true);
                 model.getTaskList().get(model.incrementElement()).setCompleted(true);
@@ -132,13 +131,18 @@ public class MainInteractor {
             @Override
             protected XSSFWorkbook call() {
                 // TODO for testing remove later
-                if(!Main.testMode) {
-                    if (AppFileTools.moveExistingGlobalSparesDb())
+                if (!Main.testMode) {
+                    if (AppFileTools.moveExistingGlobalSparesDb()) {
                         logger.info("Existing Global Spares Catalogue found and moved for later comparison");
-                    else logger.info("There is no existing Global Spares Catalogue found");
+                        model.sparesDataBaseProperty().setValue(true);
+                    } else {
+                        logger.info("There is no existing Global Spares Catalogue found");
+                    }
                     // Create new db if in normal mode
                     GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
+                    globalSparesRepository =  new GlobalSparesRepositoryImpl();
                 }
+
                 model.setTotalWork(ExcelRipper.estimateTotalWork(model.getWorkbook()));
                 logger.info(model.totalWorkToString());
                 return null;
@@ -162,125 +166,6 @@ public class MainInteractor {
         model.getLoadingController().getStage().getScene().getStylesheets().add("css/" + Main.theme + ".css");
     }
 
-//    public void convertToSql() {
-//        long start = System.currentTimeMillis();
-//        model.getProgressBar().setProgress(0);
-//        model.getTaskList().addAll(
-//                new TaskItem("Adding Product to Spares"),
-//                new TaskItem("Adding Archived Product to Spares"),
-//                new TaskItem("Adding Replacement CRs"),
-//                new TaskItem("Adding Uniflair Cross Reference"),
-//                new TaskItem("Consolidating Product to Spares"),
-//                new TaskItem("Consolidating Archived Product to Spares"),
-//                new TaskItem("Vacuuming database"),
-//                new TaskItem("Calculating Changes")
-//        );
-//        globalSparesRepository.changePRAGMASettinsForInsert();
-//        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
-//
-//        CompletableFuture<Void> chain = CompletableFuture.runAsync(() -> {}, backgroundExec);
-//
-//        // ──────────────────────────────────────────────────────
-//        // Phase 1: Active Product to Spares
-//        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Product to Spares",
-//                () -> getSheet("Product to Spares").ifPresent(sheet ->
-//                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
-//                )
-//        ), backgroundExec);
-//        // ──────────────────────────────────────────────────────
-//        // Phase 2: Archived Product to Spares
-//        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Archived Product to Spares",
-//                () -> {
-//                    getSheet("Archived Product to Spares").ifPresent(sheet ->
-//                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
-//                    );
-//                }
-//        ), backgroundExec);
-//        //──────────────────────────────────────────────────────
-//        // Phase 3 Replacement CRs
-//        //──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Replacement CRs",
-//                () -> {
-//                    getSheet("Replacement CRs").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, model.getReplacementCRs())
-//                    );
-//                }
-//        ), backgroundExec);
-//        //──────────────────────────────────────────────────────
-//        // Phase 4 Uniflair Cross Reference
-//        //──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Uniflair Cross Reference",
-//                () -> {
-//                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-//                            extractReplacementCr(sheet, model.getUniflairCrossReference())
-//                    );
-//                }
-//        ), backgroundExec);
-//        // ──────────────────────────────────────────────────────
-//        // Phase 5 Consolidating Product to Spares
-//        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Consolidating Product to Spares",
-//                () -> {
-//                    // increases speed by 3 seconds but increases size
-//                    //globalSparesRepository.indexProductToSpares();
-//                    consolidateWithJSON(false, editedSpares);
-//                }
-//        ), backgroundExec);
-//        // ──────────────────────────────────────────────────────
-//        // Phase 6 Consolidating Archived Product to Spares
-//        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Consolidating Archived Product to Spares",
-//                () -> {
-//                    consolidateWithJSON(true, editedSpares);
-//                }
-//        ), backgroundExec);
-//        // ──────────────────────────────────────────────────────
-//        // Phase 7 Vacuum Database
-//        // ──────────────────────────────────────────────────────
-//        chain = chain.thenComposeAsync(v -> createPhase(
-//                "Vacuuming database",
-//                () -> {
-//                    cleanUpDatabase();
-//                }
-//        ), backgroundExec);
-//        // ──────────────────────────────────────────────────────
-//        // Phase 8: Calculate Changes (async, returns result)
-//        // ──────────────────────────────────────────────────────
-//        CompletableFuture<SpareComparisonResult> comparisonFuture = chain
-//                .thenApplyAsync(v -> compareSparesTables(), backgroundExec);
-//
-//        // ──────────────────────────────────────────────────────
-//        // Final completion / error handling
-//        // ──────────────────────────────────────────────────────
-//        comparisonFuture.whenCompleteAsync((result, ex) -> {
-//            long end = System.currentTimeMillis();
-//            String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
-//            logger.info("Time taken: {} ms", timeTaken);
-//
-//            if (ex == null) {
-//                model.spareComparisonResultProperty().setValue(result); // result from async
-//                globalSparesRepository.saveSpareComparisonResult(result);
-//                model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
-//                model.statusMessageProperty().set(timeTaken);
-//                model.getTa().appendText("All phases completed successfully ✓\n");
-//                model.getProgressBar().setProgress(1.0);
-//            } else {
-//                model.getTa().appendText("❌ Conversion failed: " + ex.getMessage() + "\n");
-//                ex.printStackTrace();
-//                model.viewStatusProperty().set(ViewStatus.ERROR);
-//                model.getProgressBar().setProgress(0);
-//            }
-//        }, fxExec);
-//    }
-
     public void convertToSql() {
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
@@ -303,7 +188,7 @@ public class MainInteractor {
             // Optional: any quick synchronous setup
         }, backgroundExec);
 
-        if(!Main.testMode) {
+        if (!Main.testMode) {
             // ──────────────────────────────────────────────────────
             // Phase 1: Active Product to Spares
             // ──────────────────────────────────────────────────────
@@ -385,12 +270,30 @@ public class MainInteractor {
             long end = System.currentTimeMillis();
             String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
             logger.info("Time taken: {} ms", timeTaken);
-            try {
-                model.spareComparisonResultProperty().setValue(compareSparesTables());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+
+            Optional<SpareComparisonResult> compareSparesTables = compareSparesTables();
+            if (compareSparesTables.isPresent()) {
+                model.spareComparisonResultProperty().setValue(compareSparesTables.get()); // do we need this?
+                model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
+                model.spareComparisonResultProperty().get();
+                logger.info("There are changes made to the database");
+                logger.info("Spares added to database: {}", compareSparesTables.get().getAdded());
+                logger.info("Spares removed from database: {}", compareSparesTables.get().getRemoved());
+                logger.info("Spares archived: {}", compareSparesTables.get().getArchived());
+                logger.info("Spares unarchived: {}", compareSparesTables.get().getUnarchived());
+                logger.info("Range and Product Family Changes: {}", compareSparesTables.get().getPimChanges());
+                logger.info("Replacement Item Changes: {}", compareSparesTables.get().getReplacementItemChanges());
+                logger.info("Std Exchange Item Changes: {}", compareSparesTables.get().getStandardExchangeItemChanges());
+                logger.info("Spare Description Changes: {}", compareSparesTables.get().getSpareDescriptionChanges());
+                logger.info("End of Service Date Changes: {}", compareSparesTables.get().getEndOfServiceDateChanges());
+                logger.info("Last Update Changes: {}", compareSparesTables.get().getLastUpdateChanges());
+                logger.info("Added to Catalogue Date Changes: {}", compareSparesTables.get().getAddedToCatalogueChanges());
+                logger.info("Removed from Catalogue Date Changes: {}", compareSparesTables.get().getRemovedFromCatalogueChanges());
+                logger.info("Comments Changes: {}", compareSparesTables.get().getCommentsChanges());
+            } else {
+                model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
+                logger.warn("There is no previous db to calculate changes, moving to options screen");
             }
-            model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
             model.statusMessageProperty().set(timeTaken);
             if (ex == null) {
                 model.getTa().appendText("All phases completed successfully ✓\n");
@@ -412,7 +315,6 @@ public class MainInteractor {
 
         return String.format("%02d:%02d", minutes, seconds);
     }
-
 
     // helper to return specified sheet
     private Optional<Sheet> getSheet(String sheetName) {
@@ -446,7 +348,7 @@ public class MainInteractor {
             if (!existingSpares.contains(dto.getSpareItem())) {
                 globalSparesRepository.insertConsolidatedProductToSpare(dto);
             } else {
-                logger.warn("Spare {} exists: setting aside",  dto.getSpareItem());
+                logger.warn("Spare {} exists: setting aside", dto.getSpareItem());
                 editedSpares.add(dto);
             }
             moveProgressIndicator(step);
@@ -617,10 +519,13 @@ public class MainInteractor {
         return java.time.LocalDateTime.now() + " [" + Thread.currentThread().getName() + "]";
     }
 
-    public SpareComparisonResult compareSparesTables() {
+    public Optional<SpareComparisonResult> compareSparesTables() {
 
-        Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
+        if(oldRepository == null) return Optional.empty();
         Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
+
+        if (oldSpares.size() == 0) return Optional.empty();
+        Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
 
         int added = (int) newSpares.keySet().stream()
                 .filter(item -> !oldSpares.containsKey(item))
@@ -642,26 +547,29 @@ public class MainInteractor {
             SparesDTO newDto = entry.getValue();
             SparesDTO oldDto = oldSpares.get(key);
 
-            if (!oldDto.getArchived() && newDto.getArchived())  archived++;
-            if (oldDto.getArchived()  && !newDto.getArchived()) unarchived++;
+            if (!oldDto.getArchived() && newDto.getArchived()) archived++;
+            if (oldDto.getArchived() && !newDto.getArchived()) unarchived++;
 
-            if (!Objects.equals(oldDto.getPim(),                     newDto.getPim()))                     pimChanges++;
-            if (!Objects.equals(oldDto.getReplacementItem(),         newDto.getReplacementItem()))         replacementItemChanges++;
-            if (!Objects.equals(oldDto.getStandardExchangeItem(),    newDto.getStandardExchangeItem()))    standardExchangeItemChanges++;
-            if (!Objects.equals(oldDto.getSpareDescription(),        newDto.getSpareDescription()))        spareDescriptionChanges++;
-            if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate())) endOfServiceDateChanges++;
-            if (!Objects.equals(oldDto.getLastUpdate(),              newDto.getLastUpdate()))              lastUpdateChanges++;
-            if (!Objects.equals(oldDto.getAddedToCatalogue(),        newDto.getAddedToCatalogue()))        addedToCatalogueChanges++;
-            if (!Objects.equals(oldDto.getRemovedFromCatalogue(),    newDto.getRemovedFromCatalogue()))    removedFromCatalogueChanges++;
-            if (!Objects.equals(oldDto.getComments(),                newDto.getComments()))                commentsChanges++;
+            if (!Objects.equals(oldDto.getPim(), newDto.getPim())) pimChanges++;
+            if (!Objects.equals(oldDto.getReplacementItem(), newDto.getReplacementItem())) replacementItemChanges++;
+            if (!Objects.equals(oldDto.getStandardExchangeItem(), newDto.getStandardExchangeItem()))
+                standardExchangeItemChanges++;
+            if (!Objects.equals(oldDto.getSpareDescription(), newDto.getSpareDescription())) spareDescriptionChanges++;
+            if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate()))
+                endOfServiceDateChanges++;
+            if (!Objects.equals(oldDto.getLastUpdate(), newDto.getLastUpdate())) lastUpdateChanges++;
+            if (!Objects.equals(oldDto.getAddedToCatalogue(), newDto.getAddedToCatalogue())) addedToCatalogueChanges++;
+            if (!Objects.equals(oldDto.getRemovedFromCatalogue(), newDto.getRemovedFromCatalogue()))
+                removedFromCatalogueChanges++;
+            if (!Objects.equals(oldDto.getComments(), newDto.getComments())) commentsChanges++;
         }
 
-        return new SpareComparisonResult(
+        return Optional.of(new SpareComparisonResult(
                 added, removed, archived, unarchived,
                 pimChanges, replacementItemChanges, standardExchangeItemChanges,
                 spareDescriptionChanges, endOfServiceDateChanges, lastUpdateChanges,
                 addedToCatalogueChanges, removedFromCatalogueChanges, commentsChanges
-        );
+        ));
     }
 
     public void closeApplication() {
@@ -676,24 +584,24 @@ public class MainInteractor {
         String absolutePath = model.fileNameProperty().get().getText();
         productionRepository = new ProductionRepositoryImpl(absolutePath);
 
-        if(model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
+        if (model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
             List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
             int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
             logBatchInsertResult(updates, "custom spares");
         }
 
         // next lets add ranges
-        if(model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
+        if (model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
             GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
 
-        if(model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
+        if (model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
             GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
 
-        if(model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
+        if (model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
 
         }
 
-        if(model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
+        if (model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
 
         }
     }

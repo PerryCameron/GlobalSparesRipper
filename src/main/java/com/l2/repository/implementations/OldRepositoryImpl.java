@@ -8,19 +8,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.sqlite.SQLiteDataSource;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class OldRepositoryImpl implements OldRepository {
     private static final Logger logger = LoggerFactory.getLogger(OldRepositoryImpl.class);
-    private final JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate =null;
     NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
 
     public OldRepositoryImpl() {
-        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getOldSparesDataSource("Old Spares Repo"));
+        Optional<SQLiteDataSource> dataSource = DatabaseConnector.getOldSparesDataSource("Old Spares Repo");
+        if (dataSource.isPresent()) {
+            this.jdbcTemplate = new JdbcTemplate(dataSource.get());
+        }
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource());
     }
 
@@ -41,7 +46,7 @@ public class OldRepositoryImpl implements OldRepository {
     @Override
     public Map<String, SparesDTO> getAllBySpareItem() {
         Map<String, SparesDTO> spares = new HashMap<>();
-        String sql = "SELECT * FROM spares";
+        String sql = "SELECT * FROM spares WHERE custom_add = 0"; // we don't want to compare custom adds
         try {
             spares = jdbcTemplate.query(sql, new SparesRowMapper())
                     .stream()

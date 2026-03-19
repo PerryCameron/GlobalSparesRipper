@@ -22,6 +22,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.annotation.Transactional;
+import org.sqlite.SQLiteDataSource;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -33,13 +34,20 @@ import java.util.stream.Collectors;
 
 public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     private static final Logger logger = LoggerFactory.getLogger(GlobalSparesRepositoryImpl.class);
-    private final JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate;
     NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
 
     public GlobalSparesRepositoryImpl() {
-        this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getGlobalSparesDataSource("Global Spares Repo"));
-        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource());
+        Optional<SQLiteDataSource> dataSource = DatabaseConnector.getGlobalSparesDataSource("Global Spares Repo");
+        dataSource.ifPresentOrElse(
+                db -> {
+                    this.jdbcTemplate = new JdbcTemplate(db);
+                    this.namedParameterJdbcTemplate =
+                            new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource());
+                },
+                () -> logger.error("Could not connect to new Global Spares Repo")
+        );
     }
 
     @Transactional
@@ -108,8 +116,6 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         String t = s.trim();
         return t.isEmpty() ? null : t;
     }
-
-
 
     @Override
     public List<SparesDTO> findSparesByItems(List<String> spareItems) {
