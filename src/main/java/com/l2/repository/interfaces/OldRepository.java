@@ -6,6 +6,5 @@ import java.util.Map;
 
 public interface OldRepository {
     Map<String, Integer>  countArchived();
-
     Map<String, SparesDTO> getAllBySpareItem();
 }

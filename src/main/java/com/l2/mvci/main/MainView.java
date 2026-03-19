@@ -395,7 +395,7 @@ public class MainView implements Builder<Region> {
                     cbNotes.isSelected(),    // include custom notes
                     cbPhotos.isSelected());    // include photos
 
-            model.dataBaseOptionsObjectPropertyProperty().set(dataBaseOptions);
+            model.dataBaseOptionsObjectProperty().set(dataBaseOptions);
 
             action.accept(MainMessage.BUILD_FINAL_DATABASE);
 

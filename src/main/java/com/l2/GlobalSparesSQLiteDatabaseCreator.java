@@ -172,5 +172,33 @@ public class GlobalSparesSQLiteDatabaseCreator {
             logger.error(e.getMessage());
         }
     }
+
+    public static void insertCoolingRanges(String databaseName) {
+        Path path = AppFileTools.getDbPath();
+        logger.info("Inserting Cooling Ranges...{}", path.toString());
+        String url = "jdbc:sqlite:" + ApplicationPaths.globalSparesDir.resolve(databaseName);
+
+        // SQL commands for creating tables
+        String createTables = """
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Third Party Local Offers', 'cooling', 'Third Party Local Offers', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Air Cooled Chillers', 'cooling', 'Uniflair Air Cooled Chillers', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Chilled Water InRow Cooling', 'cooling', 'Uniflair Chilled Water InRow Cooling', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Chillers', 'cooling', 'Uniflair Chillers', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Direct Expansion InRow Cooling', 'cooling', 'Uniflair Direct Expansion InRow Cooling', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Med/Large Room Cooling', 'cooling', 'Uniflair Med/Large Room Cooling', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Room Cooling', 'cooling', 'Uniflair Room Cooling', CURRENT_TIMESTAMP, null);
+                INSERT INTO ranges (range, range_type, range_additional, last_update, last_updated_by) VALUES ('Uniflair Small Room Cooling', 'cooling', 'Uniflair Small Room Cooling', CURRENT_TIMESTAMP, null);
+                """;
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement stmt = conn.createStatement()) {
+
+            // Create tables
+            stmt.executeUpdate(createTables);
+            logger.info("Ranges inserted successfully.");
+
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+        }
+    }
 }
 

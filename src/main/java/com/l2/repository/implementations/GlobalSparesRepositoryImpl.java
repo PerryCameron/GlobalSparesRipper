@@ -21,6 +21,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -40,6 +41,74 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         this.jdbcTemplate = new JdbcTemplate(DatabaseConnector.getGlobalSparesDataSource("Global Spares Repo"));
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate.getDataSource());
     }
+
+    @Transactional
+    @Override
+    public int[] batchInsertSpares(List<SparesDTO> spares) {
+        if (spares == null || spares.isEmpty()) {
+            return new int[0];
+        }
+
+        final String sql = """
+            INSERT INTO spares (
+                pim,
+                spare_item,
+                replacement_item,
+                standard_exchange_item,
+                spare_description,
+                catalogue_version,
+                end_of_service_date,
+                last_update,
+                added_to_catalogue,
+                removed_from_catalogue,
+                comments,
+                keywords,
+                archived,
+                custom_add,
+                last_updated_by
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(spare_item) DO NOTHING
+            """;
+
+        // Booleans are stored as 0/1 (per your CHECK constraints)
+        return jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                SparesDTO s = spares.get(i);
+                ps.setString(1,  nullIfBlank(s.getPim()));
+                ps.setString(2,  nullIfBlank(s.getSpareItem()));              // UNIQUE
+                ps.setString(3,  nullIfBlank(s.getReplacementItem()));
+                ps.setString(4,  nullIfBlank(s.getStandardExchangeItem()));
+                ps.setString(5,  nullIfBlank(s.getSpareDescription()));
+                ps.setString(6,  nullIfBlank(s.getCatalogueVersion()));
+                ps.setString(7,  nullIfBlank(s.getProductEndOfServiceDate()));
+                ps.setString(8,  nullIfBlank(s.getLastUpdate()));
+                ps.setString(9,  nullIfBlank(s.getAddedToCatalogue()));
+                ps.setString(10, nullIfBlank(s.getRemovedFromCatalogue()));
+                ps.setString(11, nullIfBlank(s.getComments()));
+                ps.setString(12, nullIfBlank(s.getKeywords()));
+                ps.setInt(13,  booleanToBit(s.getArchived()));    // CHECK (archived IN (0,1))
+                ps.setInt(14,  booleanToBit(s.getCustomAdd()));   // CHECK (custom_add IN (0,1))
+                ps.setString(15, nullIfBlank(s.getLastUpdatedBy()));
+            }
+
+            @Override
+            public int getBatchSize() {
+                return spares.size();
+            }
+        });
+    }  // is it possible to
+
+    private static int booleanToBit(Boolean b) {
+        return Boolean.TRUE.equals(b) ? 1 : 0;
+    }
+
+    private static String nullIfBlank(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
 
 
     @Override
@@ -1090,7 +1159,6 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
 
     @Override
     public Map<String, SparesDTO> getAllBySpareItem() {
-        System.out.println("getAllBySpareItem() called");
         String sql = "SELECT * FROM spares";
         return jdbcTemplate.query(sql, new SparesRowMapper())
                 .stream()

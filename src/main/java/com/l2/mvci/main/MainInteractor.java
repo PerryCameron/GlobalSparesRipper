@@ -390,7 +390,6 @@ public class MainInteractor {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("Sent changes to view");
             model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
             model.statusMessageProperty().set(timeTaken);
             if (ex == null) {
@@ -676,14 +675,36 @@ public class MainInteractor {
     public void buildFinalDatabase() {
         String absolutePath = model.fileNameProperty().get().getText();
         productionRepository = new ProductionRepositoryImpl(absolutePath);
-        System.out.println(model.dataBaseOptionsObjectProperty().get().toString());
 
-        // this will get our spares (works)
-        // List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
-        // customSpares.stream().forEach(System.out::println);
+        if(model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
+            List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
+            int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
+            logBatchInsertResult(updates, "custom spares");
+        }
 
         // next lets add ranges
         if(model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
-        GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
+            GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
+
+        if(model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
+            GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
+
+        if(model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
+
+        }
+
+        if(model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
+
+        }
+    }
+
+    private void logBatchInsertResult(int[] results, String label) {
+        int inserted = 0;
+        for (int r : results) {
+            if (r > 0) {
+                inserted += r;
+            }
+        }
+        logger.info("Inserted {} of {} {}", inserted, results.length, label);
     }
 }
