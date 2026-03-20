@@ -3,6 +3,7 @@ package com.l2.mvci.main;
 import com.l2.*;
 import com.l2.dto.*;
 import com.l2.repository.implementations.GlobalSparesRepositoryImpl;
+import com.l2.repository.implementations.OldRepositoryImpl;
 import com.l2.repository.implementations.ProductionRepositoryImpl;
 import com.l2.repository.interfaces.GlobalSparesRepository;
 import com.l2.repository.interfaces.OldRepository;
@@ -15,7 +16,6 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sqlite.SQLiteDataSource;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,7 +31,7 @@ public class MainInteractor {
     private final MainModel model;
     private static final Logger logger = LoggerFactory.getLogger(MainInteractor.class);
     private static GlobalSparesRepository globalSparesRepository = null;
-    private static final OldRepository oldRepository = null;
+    private static OldRepository oldRepository = null;
     private static ProductionRepository productionRepository = null;
 
     public MainInteractor(MainModel model) {
@@ -140,9 +140,9 @@ public class MainInteractor {
                     }
                     // Create new db if in normal mode
                     GlobalSparesSQLiteDatabaseCreator.createDataBase("global-spares.db");
-                    globalSparesRepository =  new GlobalSparesRepositoryImpl();
-                }
 
+                }
+                globalSparesRepository = new GlobalSparesRepositoryImpl();
                 model.setTotalWork(ExcelRipper.estimateTotalWork(model.getWorkbook()));
                 logger.info(model.totalWorkToString());
                 return null;
@@ -179,16 +179,17 @@ public class MainInteractor {
                 new TaskItem("Vacuuming database"),
                 new TaskItem("Calculating Changes")
         );
-        // changes sqlite PRAGMA settings for speed
-        globalSparesRepository.changePRAGMASettinsForInsert();
-        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
 
+
+        List<ProductToSparesDTO> editedSpares = new ArrayList<>();
         // Start the chain
         CompletableFuture<Void> chain = CompletableFuture.runAsync(() -> {
             // Optional: any quick synchronous setup
         }, backgroundExec);
 
         if (!Main.testMode) {
+            // changes sqlite PRAGMA settings for speed
+            globalSparesRepository.changePRAGMASettinsForInsert();
             // ──────────────────────────────────────────────────────
             // Phase 1: Active Product to Spares
             // ──────────────────────────────────────────────────────
@@ -511,21 +512,30 @@ public class MainInteractor {
     }
 
     public static boolean cleanUpDatabase() {
+        System.out.println("Cleaning up database...");
         globalSparesRepository.dropProductToSparesAndVacuum();
         return true;
     }
 
-    private static String ts() {
-        return java.time.LocalDateTime.now() + " [" + Thread.currentThread().getName() + "]";
-    }
-
     public Optional<SpareComparisonResult> compareSparesTables() {
+        //if (Main.testMode) return Optional.empty();
 
-        if(oldRepository == null) return Optional.empty();
+        this.oldRepository = new OldRepositoryImpl();
+
+        if (oldRepository == null) {
+            logger.error("Old repository is null!");
+            return Optional.empty();
+        }
         Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
 
-        if (oldSpares.size() == 0) return Optional.empty();
+        if (oldSpares.size() == 0) {
+            logger.error("Old repository is empty!");
+            return Optional.empty();
+        }
+
+
         Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
+
 
         int added = (int) newSpares.keySet().stream()
                 .filter(item -> !oldSpares.containsKey(item))
@@ -540,6 +550,7 @@ public class MainInteractor {
         int spareDescriptionChanges = 0, endOfServiceDateChanges = 0, lastUpdateChanges = 0;
         int addedToCatalogueChanges = 0, removedFromCatalogueChanges = 0, commentsChanges = 0;
 
+        System.out.println("Getting to for loop");
         for (Map.Entry<String, SparesDTO> entry : newSpares.entrySet()) {
             String key = entry.getKey();
             if (!oldSpares.containsKey(key)) continue;
@@ -554,11 +565,13 @@ public class MainInteractor {
             if (!Objects.equals(oldDto.getReplacementItem(), newDto.getReplacementItem())) replacementItemChanges++;
             if (!Objects.equals(oldDto.getStandardExchangeItem(), newDto.getStandardExchangeItem()))
                 standardExchangeItemChanges++;
-            if (!Objects.equals(oldDto.getSpareDescription(), newDto.getSpareDescription())) spareDescriptionChanges++;
+            if (!Objects.equals(oldDto.getSpareDescription(), newDto.getSpareDescription()))
+                spareDescriptionChanges++;
             if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate()))
                 endOfServiceDateChanges++;
             if (!Objects.equals(oldDto.getLastUpdate(), newDto.getLastUpdate())) lastUpdateChanges++;
-            if (!Objects.equals(oldDto.getAddedToCatalogue(), newDto.getAddedToCatalogue())) addedToCatalogueChanges++;
+            if (!Objects.equals(oldDto.getAddedToCatalogue(), newDto.getAddedToCatalogue()))
+                addedToCatalogueChanges++;
             if (!Objects.equals(oldDto.getRemovedFromCatalogue(), newDto.getRemovedFromCatalogue()))
                 removedFromCatalogueChanges++;
             if (!Objects.equals(oldDto.getComments(), newDto.getComments())) commentsChanges++;
@@ -597,8 +610,11 @@ public class MainInteractor {
         if (model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
             GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
 
+        // TODO this only inserted 68 of 70 of the notes why???
         if (model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
-
+            List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
+            int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
+            logBatchInsertResult(updates, "custom notes");
         }
 
         if (model.dataBaseOptionsObjectProperty().get().includesPhotos()) {

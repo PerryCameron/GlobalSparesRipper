@@ -35,4 +35,6 @@ public interface ProductionRepository {
     SparePictureDTO getPictureBySpareName(String spareName);
 
     int updateSpare(SparesDTO spare);
+
+    List<SparesDTO> getAllSparesWithKeywords();
 }

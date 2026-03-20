@@ -1,5 +1,6 @@
 package com.l2.repository.implementations;
 
+import com.fasterxml.jackson.databind.introspect.TypeResolutionContext;
 import com.l2.dto.SparePictureDTO;
 import com.l2.dto.SparesDTO;
 import com.l2.repository.interfaces.ProductionRepository;
@@ -325,4 +326,17 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         logger.info("Updated {} spare in production database.", rowsAffected);
         return rowsAffected;
     }
+
+
+    @Override
+    public List<SparesDTO> getAllSparesWithKeywords() {
+            String sql = """
+            SELECT *
+            FROM spares
+            WHERE custom_add = 0 AND keywords IS NOT NULL AND keywords != ''
+              AND LENGTH(TRIM(keywords)) > 0
+        """;
+            return jdbcTemplate.query(sql, new SparesRowMapper());
+    }
+
 }

@@ -1156,19 +1156,24 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
     @Override
     public Map<String, Integer> countArchived() {
         Map<String, Integer> globalSpares = new HashMap<>();
-        String sql = "SELECT spare_item, archived FROM spares";
-        jdbcTemplate.query(sql, rs -> {
-            globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
-        });
-        return globalSpares;
+        try {
+            String sql = "SELECT spare_item, archived FROM spares";
+            jdbcTemplate.query(sql, rs -> {
+                globalSpares.put(rs.getString("spare_item"), rs.getInt("archived"));
+            });
+            return globalSpares;
+        } catch (Exception e) {
+            logger.error("Error counting archived spares!", e);
+            return globalSpares;
+        }
     }
 
     @Override
     public Map<String, SparesDTO> getAllBySpareItem() {
-        String sql = "SELECT * FROM spares";
-        return jdbcTemplate.query(sql, new SparesRowMapper())
-                .stream()
-                .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
+            String sql = "SELECT * FROM spares";
+            return jdbcTemplate.query(sql, new SparesRowMapper())
+                    .stream()
+                    .collect(Collectors.toMap(SparesDTO::getSpareItem, dto -> dto));
     }
 
     @Override
@@ -1229,6 +1234,50 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         logger.debug("Inserted {} row(s) into properties at epoch {}", rows, epochSeconds);
         return rows;
     }
+
+
+    @Override
+    public int[] syncKeywordsFromProduction(List<SparesDTO> productionSpares) {
+
+        if (productionSpares == null || productionSpares.isEmpty()) {
+            logger.info("syncKeywordsFromProduction(): nothing to update (empty list).");
+            return null;
+        }
+
+        // Filter out null spare_item because it's the join key.
+        List<SparesDTO> safe = productionSpares.stream()
+                .filter(Objects::nonNull)
+                .filter(dto -> dto.getSpareItem() != null && !dto.getSpareItem().isBlank())
+                .toList();
+
+        if (safe.isEmpty()) {
+            logger.info("syncKeywordsFromProduction(): nothing to update (no valid spare_item).");
+            return null;
+        }
+
+        String sql = """
+            UPDATE spares
+            SET keywords = ?
+            WHERE spare_item = ?
+        """;
+
+        int[] results = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                SparesDTO dto = safe.get(i);
+                ps.setString(1, dto.getKeywords());
+                ps.setString(2, dto.getSpareItem());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return safe.size();
+            }
+        });
+
+        return results;
+    }
+
 
 }
 

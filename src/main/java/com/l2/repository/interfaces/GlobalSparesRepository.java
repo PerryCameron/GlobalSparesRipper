@@ -11,7 +11,6 @@ import java.util.Set;
 public interface GlobalSparesRepository {
     @Transactional
     int[] batchInsertSpares(List<SparesDTO> spares);
-
     List<SparesDTO> findSparesByItems(List<String> spareItems);
     List<String> getSpareItems();
     List<SparesDTO> getAllSpares();
@@ -47,4 +46,5 @@ public interface GlobalSparesRepository {
     Map<String, Integer> countArchived();
     Map<String, SparesDTO> getAllBySpareItem();
     int saveSpareComparisonResult(SpareComparisonResult result);
+    int[] syncKeywordsFromProduction(List<SparesDTO> productionSpares);
 }
