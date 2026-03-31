@@ -163,23 +163,6 @@ public class MainView implements Builder<Region> {
         // Right column: checkmark image (only shown when complete)
         TableColumn<TaskItem, Boolean> doneCol = new TableColumn<>("Done");
         doneCol.setCellValueFactory(data -> data.getValue().completedProperty());
-//        doneCol.setCellFactory(col -> new TableCell<>() {
-//
-//            private final ImageView checkmark = new ImageView(ImageResources.YES);
-//
-//            {
-//                checkmark.setFitHeight(22);
-//                checkmark.setFitWidth(22);
-//                checkmark.setPreserveRatio(true);
-//                setAlignment(Pos.CENTER);
-//            }
-//
-//            @Override
-//            protected void updateItem(Boolean done, boolean empty) {
-//                super.updateItem(done, empty);
-//                setGraphic((done != null && done && !empty) ? checkmark : null);
-//            }
-//        });
         doneCol.setCellFactory(col -> new TableCell<>() {
             private final ImageView icon = new ImageView();
             {

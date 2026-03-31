@@ -38,7 +38,7 @@ public class MainController extends Controller<MainMessage> {
             }
             case CLOSE_APPLICATION -> interactor.closeApplication();
             case UPDATE_OPTIONS -> interactor.updateOptions();
-            case BUILD_FINAL_DATABASE -> interactor.buildFinalDatabase();
+//            case BUILD_FINAL_DATABASE -> interactor.buildFinalDatabase();
         }
     }
 }

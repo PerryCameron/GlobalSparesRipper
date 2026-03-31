@@ -49,18 +49,21 @@ public class MainInteractor {
     // Helper: createPhase – centralizes UI start/complete logic
     private CompletableFuture<Void> createPhase(boolean selected, String phaseName, Runnable phaseLogic) {
         TaskItem newTask = new TaskItem(phaseName);
-        model.getTaskList().add(newTask);
-
+        fxExec.execute(() -> {
+            // Reset progress for this phase
+            model.getProgressBar().setProgress(0);
+            model.getTaskList().add(newTask);
+        }); // JavaFX thread
+        // Conversion-Worker thread
         if (selected) return CompletableFuture.runAsync(() -> {
             // This runs on background thread
             model.getTa().appendText("Processing " + phaseName + " … ");
 
-            // Reset progress for this phase
-            Platform.runLater(() -> model.getProgressBar().setProgress(0));
             if(!Main.testMode)
                 phaseLogic.run();   // ← your long-running loop happens here
             else logger.info("Phase {} is running in test mode", phaseName);
         }, backgroundExec).thenRunAsync(() -> {
+            // JavaFX thread
             // Runs after phaseLogic finishes (success path)
             newTask.setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
@@ -76,7 +79,6 @@ public class MainInteractor {
         return CompletableFuture.runAsync(() -> {
             logger.info("Phase {} is not selected", phaseName);
             newTask.includeProperty().set(false);
-//            model.getTaskList().add(newTask);
             newTask.completedProperty().set(true);
         }, backgroundExec).thenRunAsync(() -> {
             newTask.setCompleted(true);
@@ -169,7 +171,6 @@ public class MainInteractor {
 
     public void convertToSql() {
         String absolutePath = model.fileNameProperty().get().getText();
-        boolean selected = true;
         productionRepository = new ProductionRepositoryImpl(absolutePath);
 
         long start = System.currentTimeMillis();
@@ -187,7 +188,7 @@ public class MainInteractor {
         // Phase 1: Active Product to Spares
         // ──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(
-                selected,
+                true,
                 "Product to Spares",
                 () -> getSheet("Product to Spares").ifPresent(sheet ->
                         extractProductToSpares(sheet, false, model.getProductToSparesTotal())
@@ -197,7 +198,7 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         // Phase 2: Archived Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Archived Product to Spares",
                 () -> {
                     getSheet("Archived Product to Spares").ifPresent(sheet ->
@@ -208,7 +209,7 @@ public class MainInteractor {
         //──────────────────────────────────────────────────────
         // Phase 3 Replacement CRs
         //──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Replacement CRs",
                 () -> {
                     getSheet("Replacement CRs").ifPresent(sheet ->
@@ -219,7 +220,7 @@ public class MainInteractor {
         //──────────────────────────────────────────────────────
         // Phase 4 Uniflair Cross Reference
         //──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Uniflair Cross Reference",
                 () -> {
                     getSheet("Uniflair Cross Reference").ifPresent(sheet ->
@@ -230,7 +231,7 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         // Phase 5 Consolidating Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Consolidating Product to Spares",
                 () -> {
                     // increases speed by 3 seconds but increases size
@@ -241,7 +242,7 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         // Phase 6 Consolidating Archived Product to Spares
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Consolidating Archived Product to Spares",
                 () -> {
                     consolidateWithJSON(true, editedSpares);
@@ -250,7 +251,7 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         // Phase 7 Vacuum Database
         // ──────────────────────────────────────────────────────
-        chain = chain.thenComposeAsync(v -> createPhase(selected,
+        chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Vacuuming database",
                 () -> {
                     cleanUpDatabase();
@@ -302,7 +303,16 @@ public class MainInteractor {
                     logBatchInsertResult(updates, "custom notes");
                 }
         ), backgroundExec);
-
+        // ──────────────────────────────────────────────────────
+        // Phase 12 Include Photos from original database
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                model.dataBaseOptionsObjectProperty().get().includesPhotos(),
+                "Adding Photos from original database",
+                () -> {
+                    logger.info("Adding Photos from original database");
+                }
+        ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Final completion / error handling
         // ──────────────────────────────────────────────────────
@@ -315,7 +325,8 @@ public class MainInteractor {
             Optional<SpareComparisonResult> compareSparesTables = compareSparesTables();
             if (compareSparesTables.isPresent()) {
                 model.spareComparisonResultProperty().setValue(compareSparesTables.get()); // do we need this?
-                model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
+                //TODO maybe add button here to look at final page when ready
+                //model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
                 model.spareComparisonResultProperty().get();
                 logger.info("There are changes made to the database");
                 logger.info("Spares added to database: {}", compareSparesTables.get().getAdded());
@@ -347,36 +358,6 @@ public class MainInteractor {
                 model.getProgressBar().setProgress(0);
             }
         }, fxExec);
-    }
-
-
-    public void buildFinalDatabase() {
-        String absolutePath = model.fileNameProperty().get().getText();
-        productionRepository = new ProductionRepositoryImpl(absolutePath);
-
-        if (model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
-            List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
-            int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
-            logBatchInsertResult(updates, "custom spares");
-        }
-
-        // next lets add ranges
-        if (model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
-            GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
-
-        if (model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
-            GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
-
-        // TODO this only inserted 68 of 70 of the notes why???
-        if (model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
-            List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
-            int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
-            logBatchInsertResult(updates, "custom notes");
-        }
-
-        if (model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
-
-        }
     }
 
     public static String millisecondsToMinutesSeconds(long milliseconds) {
@@ -620,7 +601,6 @@ public class MainInteractor {
         int spareDescriptionChanges = 0, endOfServiceDateChanges = 0, lastUpdateChanges = 0;
         int addedToCatalogueChanges = 0, removedFromCatalogueChanges = 0, commentsChanges = 0;
 
-        System.out.println("Getting to for loop");
         for (Map.Entry<String, SparesDTO> entry : newSpares.entrySet()) {
             String key = entry.getKey();
             if (!oldSpares.containsKey(key)) continue;
