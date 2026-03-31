@@ -42,7 +42,7 @@ public class DatabaseConnector {
         Path path = Paths.get(dbPath);
 
         if (!Files.exists(path)) {
-            logger.warn("Database file does not exist for caller [{}]: {}", caller, dbPath);
+            logger.warn("Database file does not exist [{}]: {}", caller, dbPath);
             return Optional.empty();
         }
 

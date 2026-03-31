@@ -163,20 +163,43 @@ public class MainView implements Builder<Region> {
         // Right column: checkmark image (only shown when complete)
         TableColumn<TaskItem, Boolean> doneCol = new TableColumn<>("Done");
         doneCol.setCellValueFactory(data -> data.getValue().completedProperty());
+//        doneCol.setCellFactory(col -> new TableCell<>() {
+//
+//            private final ImageView checkmark = new ImageView(ImageResources.YES);
+//
+//            {
+//                checkmark.setFitHeight(22);
+//                checkmark.setFitWidth(22);
+//                checkmark.setPreserveRatio(true);
+//                setAlignment(Pos.CENTER);
+//            }
+//
+//            @Override
+//            protected void updateItem(Boolean done, boolean empty) {
+//                super.updateItem(done, empty);
+//                setGraphic((done != null && done && !empty) ? checkmark : null);
+//            }
+//        });
         doneCol.setCellFactory(col -> new TableCell<>() {
-            private final ImageView checkmark = new ImageView(ImageResources.YES);
-
+            private final ImageView icon = new ImageView();
             {
-                checkmark.setFitHeight(22);
-                checkmark.setFitWidth(22);
-                checkmark.setPreserveRatio(true);
+                icon.setFitHeight(22);
+                icon.setFitWidth(22);
+                icon.setPreserveRatio(true);
                 setAlignment(Pos.CENTER);
             }
 
             @Override
             protected void updateItem(Boolean done, boolean empty) {
                 super.updateItem(done, empty);
-                setGraphic((done != null && done && !empty) ? checkmark : null);
+                if (empty || done == null || !done) {
+                    setGraphic(null);
+                    return;
+                }
+                // Get the TaskItem for this row to check isYes
+                TaskItem task = getTableView().getItems().get(getIndex());
+                icon.setImage(task.isIncluded() ? ImageResources.YES : ImageResources.NO);
+                setGraphic(icon);
             }
         });
         doneCol.setMaxWidth(80);
@@ -323,13 +346,11 @@ public class MainView implements Builder<Region> {
         Label explanationLabel = new Label();
         explanationLabel.setWrapText(true);
         explanationLabel.setText("""
-                We have now ripped a clean new database. It is missing the following items.
+                From this screen you can customize your database with the following options.
                 \t \u2022 Ranges
                 \t \u2022 Photos
                 \t \u2022 Custom notes
                 \t \u2022 Custom added parts
-                
-                It is time to decide the options we want to add from the old database
                 """);
 
         root.getChildren().addAll(explanationLabel, new Separator(), new Label("1) Select location of old database if different from below"));
@@ -397,7 +418,8 @@ public class MainView implements Builder<Region> {
 
             model.dataBaseOptionsObjectProperty().set(dataBaseOptions);
 
-            action.accept(MainMessage.BUILD_FINAL_DATABASE);
+//            action.accept(MainMessage.BUILD_FINAL_DATABASE);
+            action.accept(MainMessage.PREP_CONV);
 
             // TODO: Invoke your build routine here, e.g.:
             // buildFinalDatabase(Paths.get(selectedPath), include3Phase, includeCooling, includeNotes, includePhotos);

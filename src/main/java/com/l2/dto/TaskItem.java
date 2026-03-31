@@ -8,6 +8,7 @@ import javafx.beans.property.StringProperty;
 public class TaskItem {
     private final StringProperty taskName = new SimpleStringProperty();
     private final BooleanProperty completed = new SimpleBooleanProperty(false);
+    private final BooleanProperty included = new SimpleBooleanProperty(true);
 
     public TaskItem(String name) {
         taskName.set(name);
@@ -18,4 +19,10 @@ public class TaskItem {
     public String getTaskName()   { return taskName.get(); }
     public boolean isCompleted()  { return completed.get(); }
     public void setCompleted(boolean v) { completed.set(v); }
+    public boolean isIncluded() {
+        return included.get();
+    }
+    public BooleanProperty includeProperty() {
+        return included;
+    }
 }

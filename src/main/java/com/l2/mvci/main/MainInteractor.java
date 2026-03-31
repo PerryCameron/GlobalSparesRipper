@@ -47,32 +47,22 @@ public class MainInteractor {
     private final Executor fxExec = Platform::runLater;  // shorthand for UI thread
 
     // Helper: createPhase – centralizes UI start/complete logic
-    private CompletableFuture<Void> createPhase(String phaseName, Runnable phaseLogic) {
-        return CompletableFuture.runAsync(() -> {
+    private CompletableFuture<Void> createPhase(boolean selected, String phaseName, Runnable phaseLogic) {
+        TaskItem newTask = new TaskItem(phaseName);
+        model.getTaskList().add(newTask);
+
+        if (selected) return CompletableFuture.runAsync(() -> {
             // This runs on background thread
             model.getTa().appendText("Processing " + phaseName + " … ");
 
             // Reset progress for this phase
-            Platform.runLater(() -> {
-                model.getProgressBar().setProgress(0);
-            });
-
-            phaseLogic.run();   // ← your long-running loop happens here
-
+            Platform.runLater(() -> model.getProgressBar().setProgress(0));
+            if(!Main.testMode)
+                phaseLogic.run();   // ← your long-running loop happens here
+            else logger.info("Phase {} is running in test mode", phaseName);
         }, backgroundExec).thenRunAsync(() -> {
             // Runs after phaseLogic finishes (success path)
-            // for testing
-            if (Main.testMode) {
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-                model.getTaskList().get(model.incrementElement()).setCompleted(true);
-            }
-            // normal
-            model.getTaskList().get(model.incrementElement()).setCompleted(true);
+            newTask.setCompleted(true);
         }, fxExec).exceptionallyAsync(ex -> {
             logger.error(ex.getMessage(), ex);
             Platform.runLater(() -> {
@@ -80,6 +70,16 @@ public class MainInteractor {
                 model.viewStatusProperty().setValue(ViewStatus.ERROR);
             });
             throw new CompletionException(ex);  // propagate to chain
+        }, fxExec);
+
+        // default not selected
+        return CompletableFuture.runAsync(() -> {
+            logger.info("Phase {} is not selected", phaseName);
+            newTask.includeProperty().set(false);
+//            model.getTaskList().add(newTask);
+            newTask.completedProperty().set(true);
+        }, backgroundExec).thenRunAsync(() -> {
+            newTask.setCompleted(true);
         }, fxExec);
     }
 
@@ -111,7 +111,8 @@ public class MainInteractor {
             XSSFWorkbook workbook = contactListTask.getValue();
             if (workbook != null) {
                 model.setWorkbook(workbook);
-                model.viewStatusProperty().setValue(ViewStatus.XFS_LOADED);
+                // model.viewStatusProperty().setValue(ViewStatus.XFS_LOADED);
+                model.viewStatusProperty().setValue(ViewStatus.UPDATE_OPTIONS);
                 model.getLoadingController().showLoadSpinner(false);
             }
         });
@@ -167,19 +168,12 @@ public class MainInteractor {
     }
 
     public void convertToSql() {
+        String absolutePath = model.fileNameProperty().get().getText();
+        boolean selected = true;
+        productionRepository = new ProductionRepositoryImpl(absolutePath);
+
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
-        model.getTaskList().addAll(
-                new TaskItem("Adding Product to Spares"),
-                new TaskItem("Adding Archived Product to Spares"),
-                new TaskItem("Adding Replacement CRs"),
-                new TaskItem("Adding Uniflair Cross Reference"),
-                new TaskItem("Consolidating Product to Spares"),
-                new TaskItem("Consolidating Archived Product to Spares"),
-                new TaskItem("Vacuuming database"),
-                new TaskItem("Calculating Changes")
-        );
-
 
         List<ProductToSparesDTO> editedSpares = new ArrayList<>();
         // Start the chain
@@ -187,85 +181,131 @@ public class MainInteractor {
             // Optional: any quick synchronous setup
         }, backgroundExec);
 
-        if (!Main.testMode) {
-            // changes sqlite PRAGMA settings for speed
-            globalSparesRepository.changePRAGMASettinsForInsert();
-            // ──────────────────────────────────────────────────────
-            // Phase 1: Active Product to Spares
-            // ──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Product to Spares",
-                    () -> getSheet("Product to Spares").ifPresent(sheet ->
-                            extractProductToSpares(sheet, false, model.getProductToSparesTotal())
-                    )
-            ), backgroundExec);
+        // changes sqlite PRAGMA settings for speed
+        globalSparesRepository.changePRAGMASettinsForInsert();
+        // ──────────────────────────────────────────────────────
+        // Phase 1: Active Product to Spares
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                selected,
+                "Product to Spares",
+                () -> getSheet("Product to Spares").ifPresent(sheet ->
+                        extractProductToSpares(sheet, false, model.getProductToSparesTotal())
+                )
+        ), backgroundExec);
 
-            // ──────────────────────────────────────────────────────
-            // Phase 2: Archived Product to Spares
-            // ──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Archived Product to Spares",
-                    () -> {
-                        getSheet("Archived Product to Spares").ifPresent(sheet ->
-                                extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
-                        );
-                    }
-            ), backgroundExec);
-            //──────────────────────────────────────────────────────
-            // Phase 3 Replacement CRs
-            //──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Replacement CRs",
-                    () -> {
-                        getSheet("Replacement CRs").ifPresent(sheet ->
-                                extractReplacementCr(sheet, model.getReplacementCRs())
-                        );
-                    }
-            ), backgroundExec);
-            //──────────────────────────────────────────────────────
-            // Phase 4 Uniflair Cross Reference
-            //──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Uniflair Cross Reference",
-                    () -> {
-                        getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-                                extractReplacementCr(sheet, model.getUniflairCrossReference())
-                        );
-                    }
-            ), backgroundExec);
-            // ──────────────────────────────────────────────────────
-            // Phase 5 Consolidating Product to Spares
-            // ──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Consolidating Product to Spares",
-                    () -> {
-                        // increases speed by 3 seconds but increases size
-                        //globalSparesRepository.indexProductToSpares();
-                        consolidateWithJSON(false, editedSpares);
-                    }
-            ), backgroundExec);
-            // ──────────────────────────────────────────────────────
-            // Phase 6 Consolidating Archived Product to Spares
-            // ──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Consolidating Archived Product to Spares",
-                    () -> {
-                        consolidateWithJSON(true, editedSpares);
-                    }
-            ), backgroundExec);
-            // ──────────────────────────────────────────────────────
-            // Phase 7 Vacuum Database
-            // ──────────────────────────────────────────────────────
-            chain = chain.thenComposeAsync(v -> createPhase(
-                    "Vacuuming database",
-                    () -> {
-                        cleanUpDatabase();
-                    }
-            ), backgroundExec);
-            // ──────────────────────────────────────────────────────
-            // Final completion / error handling
-            // ──────────────────────────────────────────────────────
-        }
+        // ──────────────────────────────────────────────────────
+        // Phase 2: Archived Product to Spares
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Archived Product to Spares",
+                () -> {
+                    getSheet("Archived Product to Spares").ifPresent(sheet ->
+                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
+                    );
+                }
+        ), backgroundExec);
+        //──────────────────────────────────────────────────────
+        // Phase 3 Replacement CRs
+        //──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Replacement CRs",
+                () -> {
+                    getSheet("Replacement CRs").ifPresent(sheet ->
+                            extractReplacementCr(sheet, model.getReplacementCRs())
+                    );
+                }
+        ), backgroundExec);
+        //──────────────────────────────────────────────────────
+        // Phase 4 Uniflair Cross Reference
+        //──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Uniflair Cross Reference",
+                () -> {
+                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+                            extractReplacementCr(sheet, model.getUniflairCrossReference())
+                    );
+                }
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 5 Consolidating Product to Spares
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Consolidating Product to Spares",
+                () -> {
+                    // increases speed by 3 seconds but increases size
+                    //globalSparesRepository.indexProductToSpares();
+                    consolidateWithJSON(false, editedSpares);
+                }
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 6 Consolidating Archived Product to Spares
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Consolidating Archived Product to Spares",
+                () -> {
+                    consolidateWithJSON(true, editedSpares);
+                }
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 7 Vacuum Database
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(selected,
+                "Vacuuming database",
+                () -> {
+                    cleanUpDatabase();
+                }
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 8 Adding Custom Spares
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                model.dataBaseOptionsObjectProperty().get().includesCustomParts(),
+                "Adding Custom Spares",
+                () -> {
+                    List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
+                    int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
+                    logBatchInsertResult(updates, "custom spares");
+                }
+        ), backgroundExec);
+
+        // ──────────────────────────────────────────────────────
+        // Phase 9 Adding 3ph Ranges
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges(),
+                "Adding 3ph Ranges",
+                () -> {
+                    GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
+                }
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 10 Adding 3ph Ranges
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges(),
+                "Adding Cooling Ranges",
+                () -> {
+                    GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
+                }
+        ), backgroundExec);
+        // TODO this only inserted 68 of 70 of the notes why???
+        // ──────────────────────────────────────────────────────
+        // Phase 11 Adding Tech Support Custom Notes
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                model.dataBaseOptionsObjectProperty().get().includesCustomNotes(),
+                "Adding Tech Support Custom Notes",
+                () -> {
+                    List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
+                    int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
+                    logBatchInsertResult(updates, "custom notes");
+                }
+        ), backgroundExec);
+
+        // ──────────────────────────────────────────────────────
+        // Final completion / error handling
+        // ──────────────────────────────────────────────────────
 
         chain.whenCompleteAsync((result, ex) -> {
             long end = System.currentTimeMillis();
@@ -307,6 +347,36 @@ public class MainInteractor {
                 model.getProgressBar().setProgress(0);
             }
         }, fxExec);
+    }
+
+
+    public void buildFinalDatabase() {
+        String absolutePath = model.fileNameProperty().get().getText();
+        productionRepository = new ProductionRepositoryImpl(absolutePath);
+
+        if (model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
+            List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
+            int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
+            logBatchInsertResult(updates, "custom spares");
+        }
+
+        // next lets add ranges
+        if (model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
+            GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
+
+        if (model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
+            GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
+
+        // TODO this only inserted 68 of 70 of the notes why???
+        if (model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
+            List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
+            int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
+            logBatchInsertResult(updates, "custom notes");
+        }
+
+        if (model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
+
+        }
     }
 
     public static String millisecondsToMinutesSeconds(long milliseconds) {
@@ -593,34 +663,6 @@ public class MainInteractor {
         model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
     }
 
-    public void buildFinalDatabase() {
-        String absolutePath = model.fileNameProperty().get().getText();
-        productionRepository = new ProductionRepositoryImpl(absolutePath);
-
-        if (model.dataBaseOptionsObjectProperty().get().includesCustomParts()) {
-            List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
-            int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
-            logBatchInsertResult(updates, "custom spares");
-        }
-
-        // next lets add ranges
-        if (model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges())
-            GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
-
-        if (model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges())
-            GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
-
-        // TODO this only inserted 68 of 70 of the notes why???
-        if (model.dataBaseOptionsObjectProperty().get().includesCustomNotes()) {
-            List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
-            int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
-            logBatchInsertResult(updates, "custom notes");
-        }
-
-        if (model.dataBaseOptionsObjectProperty().get().includesPhotos()) {
-
-        }
-    }
 
     private void logBatchInsertResult(int[] results, String label) {
         int inserted = 0;
