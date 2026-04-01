@@ -51,4 +51,6 @@ public interface GlobalSparesRepository {
     boolean spareExists(String spareName);
 
     void insertSparePicture(SparePictureDTO picture);
+
+    int[] migrateLastUpdatedBy(List<SparesDTO> spares);
 }

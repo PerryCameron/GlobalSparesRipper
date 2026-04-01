@@ -1295,6 +1295,19 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         namedParameterJdbcTemplate.update(sql, params);
     }
 
+    @Override
+    public int[] migrateLastUpdatedBy(List<SparesDTO> spares) {
+        String sql = "UPDATE spares SET last_updated_by = :lastUpdatedBy WHERE spare_item = :spareItem";
+
+        List<MapSqlParameterSource> params = spares.stream()
+                .map(spare -> new MapSqlParameterSource()
+                        .addValue("lastUpdatedBy", spare.getLastUpdatedBy())
+                        .addValue("spareItem", spare.getSpareItem()))
+                .toList();
+
+        return namedParameterJdbcTemplate.batchUpdate(sql, params.toArray(new MapSqlParameterSource[0]));
+    }
+
 }
 
 

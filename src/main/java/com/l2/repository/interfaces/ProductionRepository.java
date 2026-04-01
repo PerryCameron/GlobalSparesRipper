@@ -41,4 +41,8 @@ public interface ProductionRepository {
     List<SparePictureDTO> getAllSparePictures();
 
     int countSparePictures();
+
+    List<SparesDTO> getSparesWithLastUpdatedBy();
+
+    int countSparesWithLastUpdatedBy();
 }

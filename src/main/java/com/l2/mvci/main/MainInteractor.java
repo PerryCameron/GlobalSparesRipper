@@ -80,9 +80,7 @@ public class MainInteractor {
             logger.info("Phase {} is not selected", phaseName);
             newTask.includeProperty().set(false);
             newTask.completedProperty().set(true);
-        }, backgroundExec).thenRunAsync(() -> {
-            newTask.setCompleted(true);
-        }, fxExec);
+        }, backgroundExec).thenRunAsync(() -> newTask.setCompleted(true), fxExec);
     }
 
     public void loadWorkbookFromDroppedFile() {
@@ -200,33 +198,27 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Archived Product to Spares",
-                () -> {
-                    getSheet("Archived Product to Spares").ifPresent(sheet ->
-                            extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
-                    );
-                }
+                () -> getSheet("Archived Product to Spares").ifPresent(sheet ->
+                        extractProductToSpares(sheet, true, model.getArchivedProductToSparesTotal())
+                )
         ), backgroundExec);
         //──────────────────────────────────────────────────────
         // Phase 3 Replacement CRs
         //──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Replacement CRs",
-                () -> {
-                    getSheet("Replacement CRs").ifPresent(sheet ->
-                            extractReplacementCr(sheet, model.getReplacementCRs())
-                    );
-                }
+                () -> getSheet("Replacement CRs").ifPresent(sheet ->
+                        extractReplacementCr(sheet, model.getReplacementCRs())
+                )
         ), backgroundExec);
         //──────────────────────────────────────────────────────
         // Phase 4 Uniflair Cross Reference
         //──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Uniflair Cross Reference",
-                () -> {
-                    getSheet("Uniflair Cross Reference").ifPresent(sheet ->
-                            extractReplacementCr(sheet, model.getUniflairCrossReference())
-                    );
-                }
+                () -> getSheet("Uniflair Cross Reference").ifPresent(sheet ->
+                        extractReplacementCr(sheet, model.getUniflairCrossReference())
+                )
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 5 Consolidating Product to Spares
@@ -244,18 +236,14 @@ public class MainInteractor {
         // ──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Consolidating Archived Product to Spares",
-                () -> {
-                    consolidateWithJSON(true, editedSpares);
-                }
+                () -> consolidateWithJSON(true, editedSpares)
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 7 Vacuum Database
         // ──────────────────────────────────────────────────────
         chain = chain.thenComposeAsync(v -> createPhase(true,
                 "Vacuuming database",
-                () -> {
-                    cleanUpDatabase();
-                }
+                MainInteractor::cleanUpDatabase
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 8 Adding Custom Spares
@@ -276,9 +264,7 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 model.dataBaseOptionsObjectProperty().get().includes3PhaseRanges(),
                 "Adding 3ph Ranges",
-                () -> {
-                    GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db");
-                }
+                () -> GlobalSparesSQLiteDatabaseCreator.insert3phRanges("global-spares.db")
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Phase 10 Adding 3ph Ranges
@@ -286,9 +272,7 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 model.dataBaseOptionsObjectProperty().get().includeaCoolingRanges(),
                 "Adding Cooling Ranges",
-                () -> {
-                    GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db");
-                }
+                () -> GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db")
         ), backgroundExec);
         // TODO this only inserted 68 of 70 of the notes why???
         // ──────────────────────────────────────────────────────
@@ -309,7 +293,15 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 model.dataBaseOptionsObjectProperty().get().includesPhotos(),
                 "Adding Photos from original database",
-                () -> migratePhotos()
+                this::migratePhotos
+        ), backgroundExec);
+        // ──────────────────────────────────────────────────────
+        // Phase 13 Include last_updated_by
+        // ──────────────────────────────────────────────────────
+        chain = chain.thenComposeAsync(v -> createPhase(
+                true,
+                "Adding updated by information",
+                this::migrateLastUpdatedBy
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Final completion / error handling
@@ -351,11 +343,30 @@ public class MainInteractor {
                 model.getProgressBar().setProgress(1.0);
             } else {
                 model.getTa().appendText("❌ Conversion failed: " + ex.getMessage() + "\n");
-                ex.printStackTrace(); // or better logger
+                logger.error(ex.getMessage()); // or better logger
                 model.viewStatusProperty().set(ViewStatus.ERROR);
                 model.getProgressBar().setProgress(0);
             }
         }, fxExec);
+    }
+
+    public void migrateLastUpdatedBy() {
+//        int total = productionRepository.countSparesWithLastUpdatedBy();
+//        double step = 1.0 / total;
+        List<SparesDTO> sparesWithUpdates = productionRepository.getSparesWithLastUpdatedBy();
+
+        if (sparesWithUpdates.isEmpty()) {
+            logger.info("No spares with last_updated_by found in production DB, nothing to migrate");
+            return;
+        }
+
+        int[] updateCounts = globalSparesRepository.migrateLastUpdatedBy(sparesWithUpdates);
+
+        long totalUpdated = Arrays.stream(updateCounts).filter(count -> count > 0).count();
+        long notFound = sparesWithUpdates.size() - totalUpdated;
+
+        logger.info("Migrated last_updated_by for {}/{} spares ({} not found in new DB)",
+                totalUpdated, sparesWithUpdates.size(), notFound);
     }
 
     public void migratePhotos() {
@@ -454,12 +465,10 @@ public class MainInteractor {
                     case 1 -> dto.setReplacement(text);
                     case 2 -> dto.setComment(text.isEmpty() ? null : text);
 
-                    case 3 -> { // OldQty
-                        dto.setOldQty(parseDoubleCell(cell, text, 0.0));
-                    }
-                    case 4 -> { // NewQty
-                        dto.setNewQty(parseDoubleCell(cell, text, 0.0));
-                    }
+                    case 3 -> // OldQty
+                            dto.setOldQty(parseDoubleCell(cell, text, 0.0));
+                    case 4 -> // NewQty
+                            dto.setNewQty(parseDoubleCell(cell, text, 0.0));
                 }
             }
 
@@ -590,8 +599,6 @@ public class MainInteractor {
     }
 
     public Optional<SpareComparisonResult> compareSparesTables() {
-        //if (Main.testMode) return Optional.empty();
-
         this.oldRepository = new OldRepositoryImpl();
 
         if (oldRepository == null) {
@@ -600,7 +607,7 @@ public class MainInteractor {
         }
         Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
 
-        if (oldSpares.size() == 0) {
+        if (oldSpares.isEmpty()) {
             logger.error("Old repository is empty!");
             return Optional.empty();
         }

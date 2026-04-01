@@ -118,7 +118,7 @@ public class ProductionRepositoryImpl implements ProductionRepository {
             """;
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareItem);
-        return count != null && count > 0;
+        return count > 0;
     }
 
     @Override
@@ -263,7 +263,7 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         String sql = "SELECT COUNT(*) FROM spare_pictures WHERE spare_name = ?";
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, spareName);
-        return count != null && count > 0;
+        return count > 0;
     }
 
     @Override
@@ -349,6 +349,18 @@ public class ProductionRepositoryImpl implements ProductionRepository {
         String sql = "SELECT COUNT(*) FROM spare_pictures";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
         return count != null ? count : 0;
+    }
+
+    @Override
+    public List<SparesDTO> getSparesWithLastUpdatedBy() {
+        String sql = "SELECT * FROM spares WHERE last_updated_by IS NOT NULL";
+        return jdbcTemplate.query(sql, new SparesRowMapper());
+    }
+
+    @Override
+    public int countSparesWithLastUpdatedBy() {
+        String sql = "SELECT COUNT(*) FROM spares WHERE last_updated_by IS NOT NULL";
+        return jdbcTemplate.queryForObject(sql, Integer.class);
     }
 
 }
