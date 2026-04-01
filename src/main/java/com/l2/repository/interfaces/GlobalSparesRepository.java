@@ -53,4 +53,6 @@ public interface GlobalSparesRepository {
     void insertSparePicture(SparePictureDTO picture);
 
     int[] migrateLastUpdatedBy(List<SparesDTO> spares);
+
+    void insertComparisonResult(SpareComparisonResult result);
 }

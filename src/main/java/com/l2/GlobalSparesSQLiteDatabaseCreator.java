@@ -87,7 +87,12 @@ public class GlobalSparesSQLiteDatabaseCreator {
                                                     last_update_changes                      INTEGER NOT NULL DEFAULT 0,
                                                     added_to_catalogue_date_changes          INTEGER NOT NULL DEFAULT 0,
                                                     removed_from_catalogue_date_changes      INTEGER NOT NULL DEFAULT 0,
-                                                    comments_changes                         INTEGER NOT NULL DEFAULT 0
+                                                    comments_changes                         INTEGER NOT NULL DEFAULT 0,
+                                                    photos_copied                            INTEGER NOT NULL DEFAULT 0,
+                                                    photos_skipped                           INTEGER NOT NULL DEFAULT 0,
+                                                    custom_spares_added                      INTEGER NOT NULL DEFAULT 0,
+                                                    custom_notes_added                       INTEGER NOT NULL DEFAULT 0,
+                                                    updated_by_added                         INTEGER NOT NULL DEFAULT 0
                                                 );
                 
                                                 CREATE TABLE IF NOT EXISTS ranges (

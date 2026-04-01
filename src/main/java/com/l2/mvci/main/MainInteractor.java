@@ -31,7 +31,6 @@ public class MainInteractor {
     private final MainModel model;
     private static final Logger logger = LoggerFactory.getLogger(MainInteractor.class);
     private static GlobalSparesRepository globalSparesRepository = null;
-    private static OldRepository oldRepository = null;
     private static ProductionRepository productionRepository = null;
 
     public MainInteractor(MainModel model) {
@@ -170,6 +169,7 @@ public class MainInteractor {
     public void convertToSql() {
         String absolutePath = model.fileNameProperty().get().getText();
         productionRepository = new ProductionRepositoryImpl(absolutePath);
+        model.spareComparisonResultProperty().setValue(new SpareComparisonResult());
 
         long start = System.currentTimeMillis();
         model.getProgressBar().setProgress(0);
@@ -274,7 +274,6 @@ public class MainInteractor {
                 "Adding Cooling Ranges",
                 () -> GlobalSparesSQLiteDatabaseCreator.insertCoolingRanges("global-spares.db")
         ), backgroundExec);
-        // TODO this only inserted 68 of 70 of the notes why???
         // ──────────────────────────────────────────────────────
         // Phase 11 Adding Tech Support Custom Notes
         // ──────────────────────────────────────────────────────
@@ -284,6 +283,7 @@ public class MainInteractor {
                 () -> {
                     List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
                     int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
+                    Platform.runLater(() -> model.spareComparisonResultProperty().get().setCustomNotesAdded(countOnes(updates)));
                     logBatchInsertResult(updates, "custom notes");
                 }
         ), backgroundExec);
@@ -307,31 +307,29 @@ public class MainInteractor {
         // Final completion / error handling
         // ──────────────────────────────────────────────────────
 
+
         chain.whenCompleteAsync((result, ex) -> {
             long end = System.currentTimeMillis();
             String timeTaken = "Rip time: " + millisecondsToMinutesSeconds(end - start);
             logger.info("Time taken: {} ms", timeTaken);
 
-            Optional<SpareComparisonResult> compareSparesTables = compareSparesTables();
-            if (compareSparesTables.isPresent()) {
-                model.spareComparisonResultProperty().setValue(compareSparesTables.get()); // do we need this?
-                //TODO maybe add button here to look at final page when ready
-                //model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
-                model.spareComparisonResultProperty().get();
+            if(compareSparesTables()) {
+                globalSparesRepository.insertComparisonResult(model.spareComparisonResultProperty().get());
+                model.viewStatusProperty().set(ViewStatus.VIEW_CHANGES);
                 logger.info("There are changes made to the database");
-                logger.info("Spares added to database: {}", compareSparesTables.get().getAdded());
-                logger.info("Spares removed from database: {}", compareSparesTables.get().getRemoved());
-                logger.info("Spares archived: {}", compareSparesTables.get().getArchived());
-                logger.info("Spares unarchived: {}", compareSparesTables.get().getUnarchived());
-                logger.info("Range and Product Family Changes: {}", compareSparesTables.get().getPimChanges());
-                logger.info("Replacement Item Changes: {}", compareSparesTables.get().getReplacementItemChanges());
-                logger.info("Std Exchange Item Changes: {}", compareSparesTables.get().getStandardExchangeItemChanges());
-                logger.info("Spare Description Changes: {}", compareSparesTables.get().getSpareDescriptionChanges());
-                logger.info("End of Service Date Changes: {}", compareSparesTables.get().getEndOfServiceDateChanges());
-                logger.info("Last Update Changes: {}", compareSparesTables.get().getLastUpdateChanges());
-                logger.info("Added to Catalogue Date Changes: {}", compareSparesTables.get().getAddedToCatalogueChanges());
-                logger.info("Removed from Catalogue Date Changes: {}", compareSparesTables.get().getRemovedFromCatalogueChanges());
-                logger.info("Comments Changes: {}", compareSparesTables.get().getCommentsChanges());
+                logger.info("Spares added to database: {}", model.spareComparisonResultProperty().get().getAdded());
+                logger.info("Spares removed from database: {}", model.spareComparisonResultProperty().get().getRemoved());
+                logger.info("Spares archived: {}", model.spareComparisonResultProperty().get().getArchived());
+                logger.info("Spares unarchived: {}", model.spareComparisonResultProperty().get().getUnarchived());
+                logger.info("Range and Product Family Changes: {}", model.spareComparisonResultProperty().get().getPimChanges());
+                logger.info("Replacement Item Changes: {}", model.spareComparisonResultProperty().get().getReplacementItemChanges());
+                logger.info("Std Exchange Item Changes: {}", model.spareComparisonResultProperty().get().getStandardExchangeItemChanges());
+                logger.info("Spare Description Changes: {}", model.spareComparisonResultProperty().get().getSpareDescriptionChanges());
+                logger.info("End of Service Date Changes: {}", model.spareComparisonResultProperty().get().getEndOfServiceDateChanges());
+                logger.info("Last Update Changes: {}", model.spareComparisonResultProperty().get().getLastUpdateChanges());
+                logger.info("Added to Catalogue Date Changes: {}", model.spareComparisonResultProperty().get().getAddedToCatalogueChanges());
+                logger.info("Removed from Catalogue Date Changes: {}", model.spareComparisonResultProperty().get().getRemovedFromCatalogueChanges());
+                logger.info("Comments Changes: {}", model.spareComparisonResultProperty().get().getCommentsChanges());
             } else {
                 model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
                 logger.warn("There is no previous db to calculate changes, moving to options screen");
@@ -350,9 +348,82 @@ public class MainInteractor {
         }, fxExec);
     }
 
+
+    public static int countOnes(int[] updates) {
+        int count = 0;
+        for (int value : updates) {
+            if (value == 1) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public boolean compareSparesTables() {
+        OldRepository oldRepository = new OldRepositoryImpl();
+
+        if (oldRepository == null) {
+            logger.error("Old repository is null!");
+            return false;
+        }
+        Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
+
+        if (oldSpares.isEmpty()) {
+            logger.error("Old repository is empty!");
+            return false;
+        }
+
+        Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
+
+
+        int added = (int) newSpares.keySet().stream()
+                .filter(item -> !oldSpares.containsKey(item))
+                .count();
+
+        int removed = (int) oldSpares.keySet().stream()
+                .filter(item -> !newSpares.containsKey(item))
+                .count();
+
+        int archived = 0, unarchived = 0;
+        int pimChanges = 0, replacementItemChanges = 0, standardExchangeItemChanges = 0;
+        int spareDescriptionChanges = 0, endOfServiceDateChanges = 0, lastUpdateChanges = 0;
+        int addedToCatalogueChanges = 0, removedFromCatalogueChanges = 0, commentsChanges = 0;
+
+        for (Map.Entry<String, SparesDTO> entry : newSpares.entrySet()) {
+            String key = entry.getKey();
+            if (!oldSpares.containsKey(key)) continue;
+
+            SparesDTO newDto = entry.getValue();
+            SparesDTO oldDto = oldSpares.get(key);
+
+            if (!oldDto.getArchived() && newDto.getArchived()) archived++;
+            if (oldDto.getArchived() && !newDto.getArchived()) unarchived++;
+
+            if (!Objects.equals(oldDto.getPim(), newDto.getPim())) pimChanges++;
+            if (!Objects.equals(oldDto.getReplacementItem(), newDto.getReplacementItem())) replacementItemChanges++;
+            if (!Objects.equals(oldDto.getStandardExchangeItem(), newDto.getStandardExchangeItem()))
+                standardExchangeItemChanges++;
+            if (!Objects.equals(oldDto.getSpareDescription(), newDto.getSpareDescription()))
+                spareDescriptionChanges++;
+            if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate()))
+                endOfServiceDateChanges++;
+            if (!Objects.equals(oldDto.getLastUpdate(), newDto.getLastUpdate())) lastUpdateChanges++;
+            if (!Objects.equals(oldDto.getAddedToCatalogue(), newDto.getAddedToCatalogue()))
+                addedToCatalogueChanges++;
+            if (!Objects.equals(oldDto.getRemovedFromCatalogue(), newDto.getRemovedFromCatalogue()))
+                removedFromCatalogueChanges++;
+            if (!Objects.equals(oldDto.getComments(), newDto.getComments())) commentsChanges++;
+        }
+
+        model.spareComparisonResultProperty().get().setValues(
+                added, removed, archived, unarchived,
+                pimChanges, replacementItemChanges, standardExchangeItemChanges,
+                spareDescriptionChanges, endOfServiceDateChanges, lastUpdateChanges,
+                addedToCatalogueChanges, removedFromCatalogueChanges, commentsChanges);
+        return true;
+    }
+
     public void migrateLastUpdatedBy() {
-//        int total = productionRepository.countSparesWithLastUpdatedBy();
-//        double step = 1.0 / total;
         List<SparesDTO> sparesWithUpdates = productionRepository.getSparesWithLastUpdatedBy();
 
         if (sparesWithUpdates.isEmpty()) {
@@ -362,9 +433,12 @@ public class MainInteractor {
 
         int[] updateCounts = globalSparesRepository.migrateLastUpdatedBy(sparesWithUpdates);
 
-        long totalUpdated = Arrays.stream(updateCounts).filter(count -> count > 0).count();
-        long notFound = sparesWithUpdates.size() - totalUpdated;
-
+        int totalUpdated = 0;
+        for (int count : updateCounts) {
+            if (count > 0) totalUpdated++;
+        }
+        int notFound = sparesWithUpdates.size() - totalUpdated;
+        model.spareComparisonResultProperty().get().setUpdateByAdded(totalUpdated);  // I don't think we need to use long, maybe change longs to int so I don't have to cast
         logger.info("Migrated last_updated_by for {}/{} spares ({} not found in new DB)",
                 totalUpdated, sparesWithUpdates.size(), notFound);
     }
@@ -388,6 +462,8 @@ public class MainInteractor {
             }
             moveProgressIndicator(step);
         }
+        model.spareComparisonResultProperty().get().setPhotosCopied(copied);
+        model.spareComparisonResultProperty().get().setPhotosSkipped(skipped);
 
         logger.info("Photo migration complete. Copied: {}, Skipped: {}", copied, skipped);
     }
@@ -598,71 +674,6 @@ public class MainInteractor {
         return true;
     }
 
-    public Optional<SpareComparisonResult> compareSparesTables() {
-        this.oldRepository = new OldRepositoryImpl();
-
-        if (oldRepository == null) {
-            logger.error("Old repository is null!");
-            return Optional.empty();
-        }
-        Map<String, SparesDTO> oldSpares = oldRepository.getAllBySpareItem();
-
-        if (oldSpares.isEmpty()) {
-            logger.error("Old repository is empty!");
-            return Optional.empty();
-        }
-
-
-        Map<String, SparesDTO> newSpares = globalSparesRepository.getAllBySpareItem();
-
-
-        int added = (int) newSpares.keySet().stream()
-                .filter(item -> !oldSpares.containsKey(item))
-                .count();
-
-        int removed = (int) oldSpares.keySet().stream()
-                .filter(item -> !newSpares.containsKey(item))
-                .count();
-
-        int archived = 0, unarchived = 0;
-        int pimChanges = 0, replacementItemChanges = 0, standardExchangeItemChanges = 0;
-        int spareDescriptionChanges = 0, endOfServiceDateChanges = 0, lastUpdateChanges = 0;
-        int addedToCatalogueChanges = 0, removedFromCatalogueChanges = 0, commentsChanges = 0;
-
-        for (Map.Entry<String, SparesDTO> entry : newSpares.entrySet()) {
-            String key = entry.getKey();
-            if (!oldSpares.containsKey(key)) continue;
-
-            SparesDTO newDto = entry.getValue();
-            SparesDTO oldDto = oldSpares.get(key);
-
-            if (!oldDto.getArchived() && newDto.getArchived()) archived++;
-            if (oldDto.getArchived() && !newDto.getArchived()) unarchived++;
-
-            if (!Objects.equals(oldDto.getPim(), newDto.getPim())) pimChanges++;
-            if (!Objects.equals(oldDto.getReplacementItem(), newDto.getReplacementItem())) replacementItemChanges++;
-            if (!Objects.equals(oldDto.getStandardExchangeItem(), newDto.getStandardExchangeItem()))
-                standardExchangeItemChanges++;
-            if (!Objects.equals(oldDto.getSpareDescription(), newDto.getSpareDescription()))
-                spareDescriptionChanges++;
-            if (!Objects.equals(oldDto.getProductEndOfServiceDate(), newDto.getProductEndOfServiceDate()))
-                endOfServiceDateChanges++;
-            if (!Objects.equals(oldDto.getLastUpdate(), newDto.getLastUpdate())) lastUpdateChanges++;
-            if (!Objects.equals(oldDto.getAddedToCatalogue(), newDto.getAddedToCatalogue()))
-                addedToCatalogueChanges++;
-            if (!Objects.equals(oldDto.getRemovedFromCatalogue(), newDto.getRemovedFromCatalogue()))
-                removedFromCatalogueChanges++;
-            if (!Objects.equals(oldDto.getComments(), newDto.getComments())) commentsChanges++;
-        }
-
-        return Optional.of(new SpareComparisonResult(
-                added, removed, archived, unarchived,
-                pimChanges, replacementItemChanges, standardExchangeItemChanges,
-                spareDescriptionChanges, endOfServiceDateChanges, lastUpdateChanges,
-                addedToCatalogueChanges, removedFromCatalogueChanges, commentsChanges
-        ));
-    }
-
     public void closeApplication() {
         System.exit(0);
     }
@@ -670,7 +681,6 @@ public class MainInteractor {
     public void updateOptions() {
         model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
     }
-
 
     private void logBatchInsertResult(int[] results, String label) {
         int inserted = 0;

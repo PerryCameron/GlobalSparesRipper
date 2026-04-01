@@ -1308,6 +1308,77 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         return namedParameterJdbcTemplate.batchUpdate(sql, params.toArray(new MapSqlParameterSource[0]));
     }
 
+    @Override
+    public void insertComparisonResult(SpareComparisonResult result) {
+        String sql = """
+            INSERT INTO properties (
+                rip_date,
+                spares_added_to_database,
+                spares_removed_from_database,
+                spares_archived,
+                spares_unarchived,
+                range_and_product_family_changes,
+                replacement_item_changes,
+                std_exchange_item_changes,
+                spare_description_changes,
+                end_of_service_date_changes,
+                last_update_changes,
+                added_to_catalogue_date_changes,
+                removed_from_catalogue_date_changes,
+                comments_changes,
+                photos_copied,
+                photos_skipped,
+                custom_spares_added,
+                custom_notes_added,
+                updated_by_added
+            ) VALUES (
+                :ripDate,
+                :sparesAdded,
+                :sparesRemoved,
+                :sparesArchived,
+                :sparesUnarchived,
+                :pimChanges,
+                :replacementItemChanges,
+                :standardExchangeItemChanges,
+                :spareDescriptionChanges,
+                :endOfServiceDateChanges,
+                :lastUpdateChanges,
+                :addedToCatalogueChanges,
+                :removedFromCatalogueChanges,
+                :commentsChanges,
+                :photosCopied,
+                :photosSkipped,
+                :customSparesAdded,
+                :customNotesAdded,
+                :updateByAdded
+            )
+            """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("ripDate",                      Instant.now().getEpochSecond())
+                .addValue("sparesAdded",                  result.getAdded())
+                .addValue("sparesRemoved",                result.getRemoved())
+                .addValue("sparesArchived",               result.getArchived())
+                .addValue("sparesUnarchived",             result.getUnarchived())
+                .addValue("pimChanges",                   result.getPimChanges())
+                .addValue("replacementItemChanges",       result.getReplacementItemChanges())
+                .addValue("standardExchangeItemChanges",  result.getStandardExchangeItemChanges())
+                .addValue("spareDescriptionChanges",      result.getSpareDescriptionChanges())
+                .addValue("endOfServiceDateChanges",      result.getEndOfServiceDateChanges())
+                .addValue("lastUpdateChanges",            result.getLastUpdateChanges())
+                .addValue("addedToCatalogueChanges",      result.getAddedToCatalogueChanges())
+                .addValue("removedFromCatalogueChanges",  result.getRemovedFromCatalogueChanges())
+                .addValue("commentsChanges",              result.getCommentsChanges())
+                .addValue("photosCopied",                 result.getPhotosCopied())
+                .addValue("photosSkipped",                result.getPhotosSkipped())
+                .addValue("customSparesAdded",            result.getCustomSparesAdded())
+                .addValue("customNotesAdded",             result.getCustomNotesAdded())
+                .addValue("updateByAdded",                result.getUpdateByAdded());
+
+        namedParameterJdbcTemplate.update(sql, params);
+        logger.debug("Inserted SpareComparisonResult into properties table");
+    }
+
 }
 
 
