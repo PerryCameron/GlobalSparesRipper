@@ -37,4 +37,8 @@ public interface ProductionRepository {
     int updateSpare(SparesDTO spare);
 
     List<SparesDTO> getAllSparesWithKeywords();
+
+    List<SparePictureDTO> getAllSparePictures();
+
+    int countSparePictures();
 }

@@ -403,14 +403,6 @@ public class MainView implements Builder<Region> {
 
 //            action.accept(MainMessage.BUILD_FINAL_DATABASE);
             action.accept(MainMessage.PREP_CONV);
-
-            // TODO: Invoke your build routine here, e.g.:
-            // buildFinalDatabase(Paths.get(selectedPath), include3Phase, includeCooling, includeNotes, includePhotos);
-
-            // You might also want to validate:
-            // - selectedPath not empty
-            // - file exists and is readable
-            // - show feedback to user via dialog/label
         });
 
         HBox box = new HBox(20);

@@ -1,6 +1,5 @@
 package com.l2.repository.implementations;
 
-import com.fasterxml.jackson.databind.introspect.TypeResolutionContext;
 import com.l2.dto.SparePictureDTO;
 import com.l2.dto.SparesDTO;
 import com.l2.repository.interfaces.ProductionRepository;
@@ -337,6 +336,19 @@ public class ProductionRepositoryImpl implements ProductionRepository {
               AND LENGTH(TRIM(keywords)) > 0
         """;
             return jdbcTemplate.query(sql, new SparesRowMapper());
+    }
+
+    @Override
+    public List<SparePictureDTO> getAllSparePictures() {
+        String sql = "SELECT id, spare_name, picture FROM spare_pictures";
+        return jdbcTemplate.query(sql, new SparePictureRowMapper());
+    }
+
+    @Override
+    public int countSparePictures() {
+        String sql = "SELECT COUNT(*) FROM spare_pictures";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
+        return count != null ? count : 0;
     }
 
 }

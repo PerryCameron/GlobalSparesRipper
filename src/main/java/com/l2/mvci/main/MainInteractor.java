@@ -309,9 +309,7 @@ public class MainInteractor {
         chain = chain.thenComposeAsync(v -> createPhase(
                 model.dataBaseOptionsObjectProperty().get().includesPhotos(),
                 "Adding Photos from original database",
-                () -> {
-                    logger.info("Adding Photos from original database");
-                }
+                () -> migratePhotos()
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
         // Final completion / error handling
@@ -358,6 +356,29 @@ public class MainInteractor {
                 model.getProgressBar().setProgress(0);
             }
         }, fxExec);
+    }
+
+    public void migratePhotos() {
+        int total = productionRepository.countSparePictures();
+        double step = 1.0 / total;
+
+        List<SparePictureDTO> pictures = productionRepository.getAllSparePictures();
+
+        int copied = 0;
+        int skipped = 0;
+
+        for (SparePictureDTO picture : pictures) {
+            if (globalSparesRepository.spareExists(picture.getSpareName())) {
+                globalSparesRepository.insertSparePicture(picture);
+                copied++;
+            } else {
+                logger.info("Spare '{}' not found in new database, skipping photo.", picture.getSpareName());
+                skipped++;
+            }
+            moveProgressIndicator(step);
+        }
+
+        logger.info("Photo migration complete. Copied: {}, Skipped: {}", copied, skipped);
     }
 
     public static String millisecondsToMinutesSeconds(long milliseconds) {

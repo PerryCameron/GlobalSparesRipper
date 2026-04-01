@@ -47,4 +47,8 @@ public interface GlobalSparesRepository {
     Map<String, SparesDTO> getAllBySpareItem();
     int saveSpareComparisonResult(SpareComparisonResult result);
     int[] syncKeywordsFromProduction(List<SparesDTO> productionSpares);
+
+    boolean spareExists(String spareName);
+
+    void insertSparePicture(SparePictureDTO picture);
 }

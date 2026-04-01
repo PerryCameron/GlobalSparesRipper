@@ -1278,6 +1278,22 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         return results;
     }
 
+    @Override
+    public boolean spareExists(String spareName) {
+        String sql = "SELECT COUNT(*) FROM spares WHERE spare_item = :spareName";
+        MapSqlParameterSource params = new MapSqlParameterSource("spareName", spareName);
+        Integer count = namedParameterJdbcTemplate.queryForObject(sql, params, Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public void insertSparePicture(SparePictureDTO picture) {
+        String sql = "INSERT INTO spare_pictures (spare_name, picture) VALUES (:spareName, :picture)";
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("spareName", picture.getSpareName())
+                .addValue("picture", picture.getPicture());
+        namedParameterJdbcTemplate.update(sql, params);
+    }
 
 }
 
