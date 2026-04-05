@@ -97,6 +97,11 @@ public class MainView implements Builder<Region> {
                 Map.entry("Last Update Changes", result.getLastUpdateChanges()),
                 Map.entry("Added to Catalogue Date Changes", result.getAddedToCatalogueChanges()),
                 Map.entry("Removed from Catalogue Date Changes", result.getRemovedFromCatalogueChanges()),
+                Map.entry("Comments Changes", result.getCommentsChanges()),
+                Map.entry("Comments Changes", result.getCommentsChanges()),
+                Map.entry("Comments Changes", result.getCommentsChanges()),
+                Map.entry("Comments Changes", result.getCommentsChanges()),
+                Map.entry("Comments Changes", result.getCommentsChanges()),
                 Map.entry("Comments Changes", result.getCommentsChanges())
         ));
 
