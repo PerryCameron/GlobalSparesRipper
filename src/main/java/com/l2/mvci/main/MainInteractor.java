@@ -254,7 +254,8 @@ public class MainInteractor {
                 () -> {
                     List<SparesDTO> customSpares = productionRepository.getCustomAddedSpares();
                     int[] updates = globalSparesRepository.batchInsertSpares(customSpares);
-                    logBatchInsertResult(updates, "custom spares");
+                    int sparesAdded = logBatchInsertResult(updates, "custom spares");
+                    Platform.runLater(() -> model.spareComparisonResultProperty().get().setCustomSparesAdded(sparesAdded));
                 }
         ), backgroundExec);
 
@@ -283,8 +284,8 @@ public class MainInteractor {
                 () -> {
                     List<SparesDTO> customNotes = productionRepository.getAllSparesWithKeywords();
                     int[] updates = globalSparesRepository.syncKeywordsFromProduction(customNotes);
-                    Platform.runLater(() -> model.spareComparisonResultProperty().get().setCustomNotesAdded(countOnes(updates)));
-                    logBatchInsertResult(updates, "custom notes");
+                    int customNotesAdded = logBatchInsertResult(updates, "custom notes");
+                    Platform.runLater(() -> model.spareComparisonResultProperty().get().setCustomNotesAdded(customNotesAdded));
                 }
         ), backgroundExec);
         // ──────────────────────────────────────────────────────
@@ -346,17 +347,6 @@ public class MainInteractor {
                 model.getProgressBar().setProgress(0);
             }
         }, fxExec);
-    }
-
-
-    public static int countOnes(int[] updates) {
-        int count = 0;
-        for (int value : updates) {
-            if (value == 1) {
-                count++;
-            }
-        }
-        return count;
     }
 
     public boolean compareSparesTables() {
@@ -682,7 +672,7 @@ public class MainInteractor {
         model.viewStatusProperty().set(ViewStatus.UPDATE_OPTIONS);
     }
 
-    private void logBatchInsertResult(int[] results, String label) {
+    private int logBatchInsertResult(int[] results, String label) {
         int inserted = 0;
         for (int r : results) {
             if (r > 0) {
@@ -690,5 +680,6 @@ public class MainInteractor {
             }
         }
         logger.info("Inserted {} of {} {}", inserted, results.length, label);
+        return  inserted;
     }
 }
