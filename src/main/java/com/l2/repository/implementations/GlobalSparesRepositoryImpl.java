@@ -24,6 +24,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.sqlite.SQLiteDataSource;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -1235,7 +1236,6 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
         return rows;
     }
 
-
     @Override
     public int[] syncKeywordsFromProduction(List<SparesDTO> productionSpares) {
 
@@ -1266,7 +1266,7 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 SparesDTO dto = safe.get(i);
                 ps.setString(1, dto.getKeywords());
-                ps.setString(2, dto.getSpareItem());
+                ps.setString(2, dto.getSpareItem().strip());
             }
 
             @Override
@@ -1275,7 +1275,24 @@ public class GlobalSparesRepositoryImpl implements GlobalSparesRepository {
             }
         });
 
-        return results;
+        // Log any DTOs that didn't match a row in the DB (update count == 0)
+        for (int i = 0; i < results.length; i++) {
+            if (results[i] == 0) {
+                SparesDTO missed = safe.get(i);
+                logger.warn("syncKeywordsFromProduction(): no row updated for spare_item='{}', keywords='{}'",
+                        missed.getSpareItem(), missed.getKeywords());
+            }
+        }
+
+        // Log DTOs that were filtered out entirely (null spare_item, blank, or null DTO)
+        productionSpares.stream()
+                .filter(dto -> dto == null || dto.getSpareItem() == null || dto.getSpareItem().isBlank())
+                .forEach(dto -> logger.warn(
+                        "syncKeywordsFromProduction(): skipped DTO with missing spare_item — keywords='{}'",
+                        dto != null ? dto.getKeywords() : "null DTO"
+                ));
+
+        return results;  // this correctly inserts the notes, but I would like to log each productionSpares that does not get batch added
     }
 
     @Override

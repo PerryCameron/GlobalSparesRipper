@@ -677,7 +677,7 @@ public class MainInteractor {
         for (int r : results) {
             if (r > 0) {
                 inserted += r;
-            }
+            } else logger.warn("{} not used", label);
         }
         logger.info("Inserted {} of {} {}", inserted, results.length, label);
         return  inserted;
