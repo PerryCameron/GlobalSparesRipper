@@ -98,29 +98,24 @@ public class MainView implements Builder<Region> {
                 Map.entry("Added to Catalogue Date Changes", result.getAddedToCatalogueChanges()),
                 Map.entry("Removed from Catalogue Date Changes", result.getRemovedFromCatalogueChanges()),
                 Map.entry("Comments Changes", result.getCommentsChanges()),
-                Map.entry("Comments Changes", result.getCommentsChanges()),
-                Map.entry("Comments Changes", result.getCommentsChanges()),
-                Map.entry("Comments Changes", result.getCommentsChanges()),
-                Map.entry("Comments Changes", result.getCommentsChanges()),
-                Map.entry("Comments Changes", result.getCommentsChanges())
+                Map.entry("Photos Copied", result.getPhotosCopied()),
+                Map.entry("Photos Skipped", result.getPhotosSkipped()),
+                Map.entry("Custom Spares Added", result.getCustomSparesAdded()),
+                Map.entry("Custom Notes Added", result.getCustomNotesAdded()),
+                Map.entry("Update history Added", result.getUpdateByAdded())
         ));
 
         table.setItems(rows);
 
         // --- Buttons ---
-        Button updateBtn = new Button("Choose update options");
         Button closeBtn = new Button("Close");
 
-        HBox buttons = new HBox(10, updateBtn, closeBtn);
+        HBox buttons = new HBox(10, closeBtn);
         buttons.setPadding(new Insets(10));
         buttons.setAlignment(Pos.CENTER_RIGHT);
 
         closeBtn.setOnAction(event -> {
             action.accept(MainMessage.CLOSE_APPLICATION);
-        });
-
-        updateBtn.setOnAction(event -> {
-            action.accept(MainMessage.UPDATE_OPTIONS);
         });
 
         // --- Layout ---
